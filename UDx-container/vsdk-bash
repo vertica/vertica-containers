@@ -1,0 +1,55 @@
+#!/bin/sh
+
+PROG=`basename $0`
+
+INTERACTIVE=
+case $PROG in
+    vsdk-bash)
+        INTERACTIVE=-it
+        CMD=/usr/bin/bash
+        ;;
+    vsdk-make)
+        CMD=/usr/bin/make
+        ;;
+    vsdk-g++)
+        CMD=/opt/rh/devtoolset-7/root/usr/bin/g++
+        ;;
+    vsdk-echo)
+        CMD=/usr/bin/echo
+        ;;
+    *)
+        echo Unknown vsdk-command: $PROG
+        echo Known commands: vsdk-make, vsdk-bash, vsdk-g++
+        exit 1
+        ;;
+esac
+
+CONTAINER=verticasdk:latest
+
+user_id=`id -u`
+HOSTNAME=vsdk-$USER
+
+#         --env LD_LIBRARY_PATH=/opt/vertica/lib 
+
+CONTAINER_PATH=/opt/rh/rh-nodejs8/root/usr/bin
+CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/bin
+CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/sbin
+CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/rh-git218/root/usr/bin
+CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/devtoolset-7/root/usr/bin
+CONTAINER_PATH=$CONTAINER_PATH:/usr/lib64/ccache
+CONTAINER_PATH=$CONTAINER_PATH:/usr/bin
+CONTAINER_PATH=$CONTAINER_PATH:/bin
+CONTAINER_PATH=$CONTAINER_PATH:/sbin
+CONTAINER_PATH=$CONTAINER_PATH:/usr/sbin
+CONTAINER_PATH=$CONTAINER_PATH:/usr/local/bin
+CONTAINER_PATH=$CONTAINER_PATH:/usr/local/sbin
+
+docker run \
+       $INTERACTIVE \
+       -e PATH=$CONTAINER_PATH \
+       -v "$HOME:$HOME:rw" \
+       -v `/bin/pwd`:`/bin/pwd`:rw \
+       --user $user_id \
+       $CONTAINER \
+       `/bin/pwd` \
+       $CMD $*

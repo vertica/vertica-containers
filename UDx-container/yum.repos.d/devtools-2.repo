@@ -1,0 +1,10 @@
+[testing-devtools-2-centos-$releasever-x86_64]
+name=testing 2 devtools for CentOS $releasever
+baseurl=http://people.centos.org/tru/devtools-2/$releasever/$basearch/RPMS
+gpgcheck=0
+
+[testing-devtools-2-centos-$releasever-i386]
+name=testing 2 devtools for CentOS $releasever
+baseurl=http://people.centos.org/tru/devtools-2/$releasever/i386/RPMS
+gpgcheck=0
+
