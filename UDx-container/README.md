@@ -19,30 +19,25 @@ make wrapper
 image, since one is already in our Docker repository.)  
 
 Building a Docker container image is done by your local Docker
-daemon.  The Daemon may already have 
-
-Run the command:
+daemon.  The Daemon may already have access to a UDx-container (called `verticasdk`).  
+To see whether this is the case run the command:
 
 ```shell
 docker images | grep verticasdk
 ```
 
-To see whether the repository has a VerticaSDK container image.
 
 ## If you need to make a container image
 
-If you need to build a container image, follow 
+If you need to build a container image, follow these steps:
 
 *** First, Get a Vertica RPM 
 
-Internally to Vertica, perhaps the best way is to retrieve one from
-one of these places:
 
- - http://vdev.verticacorp.com/kits/daily/ 
- - http://vdev.verticacorp.com/kits/releases/
+If you are not a Vertica customer, the best way is to get a copy of the Community Edition at https://www.vertica.com/register/.
+If you are a Vertica customer, your Vertica manager can give you access to a Vertica rpm.
 
-I will refer to the retrieved Vertica RPM as 'the.rpm' in what
-follows.
+In what follows, I will refer to the retrieved Vertica RPM as 'the.rpm'.
 
 The Vertica RPM needs to be in the same directory as the Dockerfile so
 that the Docker build process can find it (the RPM is processed by the
@@ -51,9 +46,11 @@ filesystem).
 
 If you need to make a container image, run docker build using make: 
 
-#+BEGIN_SRC shell
+```shell
 make docker-image VERTICA_RPM=the.rpm
-#+END_SRC
+```
+This process takes a while, and downloads some things from the network as well as selecting 
+parts from the Vertica RPM.
 
 ## Using the container
 
