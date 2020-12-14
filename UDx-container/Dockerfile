@@ -7,8 +7,6 @@ FROM centos:centos7.5.1804
 
 ARG RPM
 
-RUN echo ----------------- rpm is $RPM -----------------------
-
 COPY ./yum.repos.d/docker-ce.repo /etc/yum.repos.d/
 
 # Initial packages to get devtools-7
@@ -75,11 +73,6 @@ RUN yum install -y \
         && rm -rf /var/cache/yum
 
 COPY $RPM /tmp/$RPM
-
-RUN echo ----------------- rpm is $RPM -----------------------
-RUN file /tmp/$RPM
-RUN echo ----------------- /tmp/RPM is /tmp/$RPM
-
 
 # fortunately, this runs in /, so the files get extracted into
 # /opt/... where they belong  
