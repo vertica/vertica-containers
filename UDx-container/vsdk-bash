@@ -4,20 +4,17 @@ PROG=`basename $0`
 
 INTERACTIVE=
 case $PROG in
-    vsdk-bash)
+    (vsdk-bash)
         INTERACTIVE=-it
         CMD=/usr/bin/bash
         ;;
-    vsdk-make)
-        CMD=/usr/bin/make
-        ;;
-    vsdk-g++)
+    (vsdk-g++)
         CMD=/opt/rh/devtoolset-7/root/usr/bin/g++
         ;;
-    vsdk-echo)
-        CMD=/usr/bin/echo
+    (vsdk-*)
+        CMD=/usr/bin/${PROG#vsdk-}
         ;;
-    *)
+    (*)
         echo Unknown vsdk-command: $PROG
         echo Known commands: vsdk-make, vsdk-bash, vsdk-g++
         exit 1
@@ -26,7 +23,7 @@ esac
 
 CONTAINER=verticasdk:latest
 
-user_id=`id -u`
+user_id=`id -u`:`id -g`
 HOSTNAME=vsdk-$USER
 
 #         --env LD_LIBRARY_PATH=/opt/vertica/lib 
@@ -46,10 +43,11 @@ CONTAINER_PATH=$CONTAINER_PATH:/usr/local/sbin
 
 docker run \
        $INTERACTIVE \
+       -w `/bin/pwd` \
        -e PATH=$CONTAINER_PATH \
        -v "$HOME:$HOME:rw" \
        -v `/bin/pwd`:`/bin/pwd`:rw \
-       --user $user_id \
+       --user "$user_id" \
+       --entrypoint "$CMD" \
        $CONTAINER \
-       `/bin/pwd` \
-       $CMD $*
+       "$@"
