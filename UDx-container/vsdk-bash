@@ -12,7 +12,7 @@ case $PROG in
         CMD=/opt/rh/devtoolset-7/root/usr/bin/g++
         ;;
     (vsdk-*)
-        CMD=/usr/bin/${PROG#vsdk-}
+        CMD=${PROG#vsdk-}
         ;;
     (*)
         echo Unknown vsdk-command: $PROG
@@ -44,6 +44,7 @@ CONTAINER_PATH=$CONTAINER_PATH:/usr/local/sbin
 docker run \
        $INTERACTIVE \
        -w `/bin/pwd` \
+       -e TERM=$TERM \
        -e PATH=$CONTAINER_PATH \
        -v "$HOME:$HOME:rw" \
        -v `/bin/pwd`:`/bin/pwd`:rw \

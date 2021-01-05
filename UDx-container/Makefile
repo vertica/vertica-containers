@@ -6,7 +6,7 @@
 #-----
 
 CXX = g++
-CONTAINER_TAG = verticasdk:latest
+CONTAINER_TAG ?= verticasdk:latest
 
 all: docker-image
 
@@ -15,7 +15,7 @@ VERTICA_RPM ?= vertica.rpm
 
 docker-image: .dockerimage
 
-.dockerimage: $(VERTICA_RPM)
+.dockerimage: $(VERTICA_RPM) Makefile Dockerfile
 	docker build \
 		--build-arg RPM=$(VERTICA_RPM) \
 		--tag $(CONTAINER_TAG) .
