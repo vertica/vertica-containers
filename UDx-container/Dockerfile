@@ -325,8 +325,6 @@ RUN ln -s /opt/rh/devtoolset-7/enable /etc/profile.d/enable-devtools.sh
 # Use ld.gold; faster link times
 RUN ln -sf /opt/rh/devtoolset-7/root/usr/bin/ld.gold /opt/rh/devtoolset-7/root/etc/alternatives/ld
 
-COPY wrapper /opt/vertica/bin/wrapper
-
 RUN rm -f /tmp/$RPM
 
-ENTRYPOINT [ "/opt/vertica/bin/wrapper" ]
+ENTRYPOINT [ "/usr/bin/bash" ]
