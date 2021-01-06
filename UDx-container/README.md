@@ -7,12 +7,6 @@ download-code method of your choice.  Github clones/downloads entire
 repositories, so you'll be retrieving the vertica-containers
 repository, which has the UDx-container directory as a subdirectory.  
 
-## Build the wrapper program
-
-```shell
-make wrapper
-```
-
 ## Do you need to make a container image?
 
 (If you are at Vertica, you probably don't need to make a container
