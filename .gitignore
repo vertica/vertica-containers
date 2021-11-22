@@ -1,0 +1,4 @@
+packages/*.deb
+packages/*.rpm
+vertica_data/
+cid.txt
