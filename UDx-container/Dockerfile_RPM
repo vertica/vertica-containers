@@ -1,0 +1,129 @@
+# -*- mode: shell-script -*-
+# (c) Copyright [2021] Micro Focus or one of its affiliates.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+###########################################################################
+
+# Base operating system
+ARG os_version="7.9.2009"
+
+FROM centos:${os_version}
+
+ARG RPM
+ARG vertica_version
+
+RUN bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then yum install -q -y dnf-plugins-core; yum -q config-manager --set-enabled powertools; yum -q -y install glibc-locale-source; fi" \
+    && yum -q -y update \
+    && yum -y update --security \
+    && yum -q -y makecache \
+    && yum install -y yum-plugin-ovl \
+    && yum install -y \
+           yum-utils \
+           centos-release-scl \
+    && yum clean all \
+    && yum-config-manager --enable rhel-server-rhscl-7-rpms \
+ # Packages needed to build Vertica UDxes
+    && yum install -y \
+           binutils \
+           boost \
+           bzip2-devel \
+           compat-libgfortran-41 \
+           cmake \
+           devtoolset-7-binutils \
+           devtoolset-7-binutils-devel \
+           devtoolset-7-elfutils \
+           devtoolset-7-elfutils-libelf \
+           devtoolset-7-elfutils-libs \
+           devtoolset-7-gcc \
+           devtoolset-7-gcc-c++ \
+           devtoolset-7-gcc-gfortran \
+           devtoolset-7-gdb \
+           devtoolset-7-libasan-devel \
+           devtoolset-7-libquadmath-devel \
+           devtoolset-7-libstdc++-devel \
+           devtoolset-7-oprofile \
+           devtoolset-7-runtime \
+           devtoolset-7-strace \
+           devtoolset-7-valgrind \
+           devtoolset-7-valgrind-devel \
+           devtoolset-7-libubsan-devel \
+           devtoolset-7-libtsan-devel \
+           devtoolset-7-liblsan-devel \
+           devtoolset-7-libasan-devel \
+           doxygen \
+           expat \
+           flex \
+           gcc \
+           gcc-c++ \
+           gettext \
+           glibc-devel \
+           glibc-headers \
+           glibc-static \
+           glibc-utils \
+           imake \
+           libcurl-devel \
+           "libgfortran-*" \
+           "libgomp-*" \
+           libtool \
+           libacl-devel \
+           make \
+           nasm \
+           # TODO: should use Vertica's own openssl headers, except
+           # that we don't put them into the RPM
+           openssl-devel \
+           readline-devel \
+           sudo \
+           tar \
+           && yum clean all \
+           && rm -rf /var/cache/yum
+
+COPY $RPM /tmp/$RPM
+
+# fortunately, this runs in /, so the files get extracted into
+# /opt/... where they belong  
+RUN rpm2cpio /tmp/$RPM \
+    | cpio --extract --make-directories --preserve-modification-time -v \
+    # all of bin and sbin are perhaps overkill
+    "./opt/vertica/bin/*" \
+    "./opt/vertica/sbin/*" \
+    ./opt/vertica/lib/libAutopassCrypto64.so \
+    "./opt/vertica/lib/libcom_err.so*" \
+    "./opt/vertica/lib/libcrypto.so*" \
+    ./opt/vertica/lib/libdefaultmalloc.so \
+    ./opt/vertica/lib/libdummymalloc.so \
+    "./opt/vertica/lib/libgssapi_krb5.so*" \
+    ./opt/vertica/lib/libjemalloc.so \
+    "./opt/vertica/lib/libk5crypto.so*" \
+    "./opt/vertica/lib/libkrb5.so*" \
+    "./opt/vertica/lib/libkrb5support.so*" \
+    ./opt/vertica/lib/liblmx64.so \
+    "./opt/vertica/lib/libssl.so*" \
+    ./opt/vertica/lib/libtcmalloc_minimal.so \
+    ./opt/vertica/lib/libvmalloc.so \
+    # sdk libraries
+    "./opt/vertica/sdk/*" \
+    # Enable devtoolset by default for users
+    && ln -s /opt/rh/devtoolset-7/enable /etc/profile.d/enable-devtools.sh \
+    # Use ld.gold; faster link times
+    && ln -sf /opt/rh/devtoolset-7/root/usr/bin/ld.gold /opt/rh/devtoolset-7/root/etc/alternatives/ld
+
+COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
+
+RUN rm -f /tmp/$RPM
+
+ENTRYPOINT [ "/opt/vertica/bin/entrypoint.sh" ]
+
+LABEL image_name="vertica_udx"
+LABEL os_family="Centos"
+LABEL os_version="$os_version"
+LABEL vertica_version="$vertica_version"
+LABEL maintainer="K8 Team"

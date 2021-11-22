@@ -1,0 +1,93 @@
+# -*- mode: shell-script -*-
+# (c) Copyright [2021] Micro Focus or one of its affiliates.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+###########################################################################
+
+# Base operating system
+ARG os_version="18.04"
+
+FROM ubuntu:${os_version}
+
+ARG DEB
+ARG vertica_version
+
+RUN set -x \
+    apt-get update \
+    && apt-get update -y \
+    && apt-get upgrade --no-install-recommends -y \
+    && apt-get install --no-install-recommends -yqq \
+    # Packages needed to build Vertica UDxes
+    && apt-get install -y \
+           binutils \
+           build-essential \
+           # debian g++
+           g++ \
+           # centos g++
+           # gcc-c++ \
+           autotools-dev \
+           libicu-dev \
+           libbz2-dev \
+           libboost-all-dev \
+           libbz2-dev \
+           cmake \
+           doxygen \
+           expat \
+           flex \
+           gcc \
+           gettext \
+           # centos: glibc-devel 
+           libc-dev \
+           # glibc-headers 
+           # glibc-static 
+           # glibc-utils 
+           # imake 
+           # libcurl-openssl-dev 
+           libcurl4-openssl-dev \
+           # needed for R
+           # "libgfortran-*" 
+           libgomp1 \
+           libtool \
+           libacl1-dev \
+           make \
+           nasm \
+           # TODO: should use Vertica's own openssl headers, except
+           # that we don't put them into the RPM
+           openssl \
+           libreadline-dev \
+           sudo \
+           tar 
+
+COPY $DEB /tmp/$DEB
+# deb-file-list needs to be made "by hand" based on the contents of
+# the .deb file and our list of file-patterns
+COPY deb-file-extract-list /tmp/deb-file-extract-list
+
+WORKDIR /tmp
+RUN ar x /tmp/$DEB data.tar.gz 
+WORKDIR /
+
+# fortunately, this runs in /, so the files get extracted into
+# /opt/... where they belong  
+RUN tar -x --files-from=/tmp/deb-file-extract-list -f /tmp/data.tar.gz 
+
+COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
+
+RUN rm -f /tmp/$DEB /tmp/data.tar.gz /tmp/deb-file-extract-list
+
+ENTRYPOINT [ "/opt/vertica/bin/entrypoint.sh" ]
+
+LABEL image_name="vertica_udx"
+LABEL os_family="Ubuntu"
+LABEL os_version="$os_version"
+LABEL vertica_version="$vertica_version"
+LABEL maintainer="K8 Team"

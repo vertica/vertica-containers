@@ -1,0 +1,16 @@
+./opt/vertica/bin/..*
+./opt/vertica/sbin/..*
+./opt/vertica/lib/libAutopassCrypto64.so
+./opt/vertica/lib/libcom_err.so.*
+./opt/vertica/lib/libcrypto.so.*
+./opt/vertica/lib/libdefaultmalloc.so
+./opt/vertica/lib/libgssapi_krb5.so.*
+./opt/vertica/lib/libjemalloc.so
+./opt/vertica/lib/libk5crypto.so.*
+./opt/vertica/lib/libkrb5.so.*
+./opt/vertica/lib/libkrb5support.so.*
+./opt/vertica/lib/liblmx64.so
+./opt/vertica/lib/libssl.so.*
+./opt/vertica/lib/libtcmalloc_minimal.so
+./opt/vertica/lib/libvmalloc.so
+./opt/vertica/sdk/..*

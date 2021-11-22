@@ -1,29 +1,115 @@
-#!/bin/sh
+#!/usr/bin/env bash
+# -*- mode: shell-script -*-
+
+# (c) Copyright [2021] Micro Focus or one of its affiliates.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Since this script is a wrapper for other commands (which have their
+# own command-line arguments that we don't want to interfere with),
+# most of the option-setting for this script is done using environment
+# variables.
+#
+# For example, $OSTAG-$VERTICA_VERSION is used to define the container
+# tag (e.g., verticasdk:centos-11.0.0-0).  So, if you have multiple
+# verticavsdk containers lying around, you can select among them by
+# defining these variables in the environment.
+#
+# OSTAG: one of { centos, ubuntu } --- selects the container OS
+#       version (presumably different from the host operating system,
+#       as otherwise the script just picks it up from
+#       /etc/os-release).
+# VERTICA_VERSION: something like 11.0.0-0
+#
+# In addition, there is these environment variables:
+#
+# VSDK_MOUNT: an optional space-separated list of host directories to
+#       mount in the UDx container --- that is, "I'm going to want to
+#       refer to files in these directories in, for example, my
+#       makefile, or as include directories in code to be compiled"
+#
+# VSDK_ENV: names a file filled with variable definitions.  This uses
+#       the --env-file option of the "docker run" command, so the file
+#       needs to be formatted for that option
 
 PROG=`basename $0`
 
+# If you have multiple vsdk containers, you can
+# choose among them by specifying the tag, which
+# is derived from ${OSTAG}-${VERTICA_VERSION}, if those
+# variables are set in the environment.
+
+# The user can override the OS selection by defining OSTAG in the
+# environment (mostly for testing)
+. /etc/os-release
+case $ID in
+    rhel) OSTAG=${OSTAG:=centos} ;;
+    ubuntu) OSTAG=${OSTAG:=ubuntu} ;;
+    *) OSTAG=${OSTAG:=centos} ;;
+esac
+
+case $OSTAG in
+    centos)
+        BINDIR=/usr/bin 
+        ALSO_IN_PATH=/bin
+        ;;
+    ubuntu)
+        BINDIR=/bin
+        ALSO_IN_PATH=/usr/bin
+        ;;
+esac
+V_VERSION=${VERTICA_VERSION:=11.0.0-0}
+CONTAINER_TAG=verticasdk:$OSTAG-$V_VERSION
+
 INTERACTIVE=
 case $PROG in
-    (vsdk-bash)
+    vsdk-bash)
         INTERACTIVE=-it
-        CMD=/usr/bin/bash
+        CMD=${BINDIR}/bash
         ;;
-    (vsdk-g++)
-        CMD=/opt/rh/devtoolset-7/root/usr/bin/g++
+    vsdk-cp)
+        CMD=${BINDIR}/cp
         ;;
-    (vsdk-*)
-        CMD=${PROG#vsdk-}
+    vsdk-g++)
+        case $OSTAG in
+            centos)
+                CMD=/opt/rh/devtoolset-7/root/usr/bin/g++ ;;
+            ubuntu)
+                CMD=/usr/bin/g++ ;;
+        esac
         ;;
-    (*)
+    vsdk-make)
+        CMD=/usr/bin/make
+        ;;
+    *)
         echo Unknown vsdk-command: $PROG
-        echo Known commands: vsdk-make, vsdk-bash, vsdk-g++
+        echo Known commands: vsdk-make, vsdk-g++, vsdk-bash, vsdk-cp
         exit 1
         ;;
 esac
 
-CONTAINER=verticasdk:latest
+VSDK_VOLUMES=""
+if [ "$VSDK_MOUNT"x != x ]; then
+    for dir in $VSDK_MOUNT; do
+        VSDK_VOLUMES="$VSDK_VOLUMES -v $dir:$dir"
+    done
+fi
 
-user_id=`id -u`:`id -g`
+VSDK_ENV_FILE_OPTION=""
+if [ "$VSDK_ENV"x != x ]; then
+    VSDK_ENV_FILE_OPTION="--env-file $VSDK_ENV"
+fi
+
+user_id=`id -u`
 HOSTNAME=vsdk-$USER
 
 #         --env LD_LIBRARY_PATH=/opt/vertica/lib 
@@ -34,8 +120,8 @@ CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/sbin
 CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/rh-git218/root/usr/bin
 CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/devtoolset-7/root/usr/bin
 CONTAINER_PATH=$CONTAINER_PATH:/usr/lib64/ccache
-CONTAINER_PATH=$CONTAINER_PATH:/usr/bin
-CONTAINER_PATH=$CONTAINER_PATH:/bin
+CONTAINER_PATH=$CONTAINER_PATH:${BINDIR}
+CONTAINER_PATH=$CONTAINER_PATH:${ALSO_IN_PATH}
 CONTAINER_PATH=$CONTAINER_PATH:/sbin
 CONTAINER_PATH=$CONTAINER_PATH:/usr/sbin
 CONTAINER_PATH=$CONTAINER_PATH:/usr/local/bin
@@ -43,12 +129,12 @@ CONTAINER_PATH=$CONTAINER_PATH:/usr/local/sbin
 
 docker run \
        $INTERACTIVE \
-       -w `/bin/pwd` \
-       -e TERM=$TERM \
        -e PATH=$CONTAINER_PATH \
        -v "$HOME:$HOME:rw" \
        -v `/bin/pwd`:`/bin/pwd`:rw \
-       --user "$user_id" \
-       --entrypoint "$CMD" \
-       $CONTAINER \
-       "$@"
+       $VSDK_VOLUMES \
+       $VSDK_ENV_FILE_OPTION \
+       --user $user_id \
+       $CONTAINER_TAG \
+       `/bin/pwd` \
+       "$CMD $*"
