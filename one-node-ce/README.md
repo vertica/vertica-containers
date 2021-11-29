@@ -54,7 +54,11 @@ The following variables can be exported to customize the image properties.
 | OS_VERSION   | Required OS versions.      | CentOS: 7.9.2009<br> Ubuntu: 18.04 | 
 | VERTICA_PACKAGE | Name of the .rpm or .deb file | CentOS: vertica-x86_64.RHEL6.latest.rpm<br>Ubuntu: vertica.latest.deb |
 
+The defaults may not be suitable for your site, you may want to edit the `Makefile` to use more appropriate defaults.
 
+If you don't specify a VERTICA_PACKAGE, and the TAG is not
+'latest' then the TAG is expected to be the vertica version and used
+to construct the VERTICA_PACKAGE name
 
 #### Examples:
 ```shell

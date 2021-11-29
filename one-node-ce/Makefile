@@ -11,8 +11,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Image tag to the image. To change the default, run: make TAG=latest
-# Note: if you don't specify a VERTICA_PACKAGE, and the TAG is not
+# Image tag to the image. To use something other than the default, run:
+#
+# "make TAG=your-choice",
+# e.g., 
+# "make TAG=11.0.1-1"
+#
+# If you don't specify a VERTICA_PACKAGE, and the TAG is not
 # 'latest' then the TAG is expected to be the vertica version and used
 # to construct the VERTICA_PACKAGE name
 TAG ?= latest
