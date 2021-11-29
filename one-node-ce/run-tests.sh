@@ -191,6 +191,15 @@ function some_admintools_tests() {
 }
 
 function run_tests() {
+    if ( which vsql 2>/dev/null 1>/dev/null) ; then
+        ERROR_COUNT=0
+    else
+        cat <<EOF
+ERROR: cannot find vsql in PATH
+please edit your PATH to include the directory with vsql         
+EOF
+        exit 1
+    fi
     start_container
     [ $ERROR_COUNT == 0 ] && verify_basic_query
     # verify that we can load a table
