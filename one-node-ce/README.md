@@ -54,7 +54,11 @@ The following variables can be exported to customize the image properties.
 | OS_VERSION   | Required OS versions.      | CentOS: 7.9.2009<br> Ubuntu: 18.04 | 
 | VERTICA_PACKAGE | Name of the .rpm or .deb file | CentOS: vertica-x86_64.RHEL6.latest.rpm<br>Ubuntu: vertica.latest.deb |
 
+The defaults may not be suitable for your site, you may want to edit the `Makefile` to use more appropriate defaults.
 
+If you don't specify a VERTICA_PACKAGE, and the TAG is not
+'latest' then the TAG is expected to be the vertica version and used
+to construct the VERTICA_PACKAGE name
 
 #### Examples:
 ```shell
@@ -91,11 +95,13 @@ After `Dockerfile_<distro>` installs the RPM or DEB file, it runs `tools/cleanup
 
 # Testing with ./run_tests.sh
 
-The `./run_tests.sh` script verifies that the container can execute Vertica and some of the additional libraries. This script requires a [local copy of the vsql client](#getting-a-local-copy-of-vsql). You can run the script directly, or you can run it as `make test`.
+Once you have built your container, you can test it using the `./run_tests.sh` script (or by running `make test`).
+
+The `./run_tests.sh` script verifies that the container can execute Vertica and some of the additional libraries. This script requires a [local copy of the vsql client](#getting-a-local-copy-of-vsql). 
 
 Before you test your container, you must stop any existing Vertica server (container or otherwise) on your test system because the `./run_tests.sh` script uses the normal Vertica port number.
 
-The test creates a new container with a unique tab, and volume. Because the test sets up the optional libraries and creates the VMart database, creating a new container can take as long as three minutes.
+The test uses your image to create a new container with a unique tag, and volume. Because the test sets up the optional libraries and creates the VMart database, creating a new container can take as long as three minutes.
 
 If the tests pass, "All tests passed" appears at the end of the output, and the script exits with a 0 exit status. If the test fails with errors, the output contains `ERROR: <description>`, where `<description>` is a description of the error.
 
