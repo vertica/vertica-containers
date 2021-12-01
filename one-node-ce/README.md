@@ -101,7 +101,7 @@ The `./run_tests.sh` script verifies that the container can execute Vertica and 
 
 Before you test your container, you must stop any existing Vertica server (container or otherwise) on your test system because the `./run_tests.sh` script uses the normal Vertica port number.
 
-The test uses your image to create a new container with a unique tab, and volume. Because the test sets up the optional libraries and creates the VMart database, creating a new container can take as long as three minutes.
+The test uses your image to create a new container with a unique tag, and volume. Because the test sets up the optional libraries and creates the VMart database, creating a new container can take as long as three minutes.
 
 If the tests pass, "All tests passed" appears at the end of the output, and the script exits with a 0 exit status. If the test fails with errors, the output contains `ERROR: <description>`, where `<description>` is a description of the error.
 
