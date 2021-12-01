@@ -97,7 +97,7 @@ After `Dockerfile_<distro>` installs the RPM or DEB file, it runs `tools/cleanup
 
 Once you have built your container, you can test it using the `./run_tests.sh` script (or by running `make test`).
 
-The `./run_tests.sh` script verifies that the container can execute Vertica and some of the additional libraries. This script requires a [local copy of the vsql client](#getting-a-local-copy-of-vsql). You can run the script directly, or you can run it as `make test`.
+The `./run_tests.sh` script verifies that the container can execute Vertica and some of the additional libraries. This script requires a [local copy of the vsql client](#getting-a-local-copy-of-vsql). 
 
 Before you test your container, you must stop any existing Vertica server (container or otherwise) on your test system because the `./run_tests.sh` script uses the normal Vertica port number.
 
