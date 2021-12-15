@@ -78,6 +78,7 @@ CONTAINER_NAME = verticasdk
 CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS)-$(VERTICA_VERSION)
 
 DEFAULT:
+	$(MAKE) vsdk-cp vsdk-g++ vsdk-make
 ifeq ($(TARGET), rpm)	
 	$(MAKE) rpm_build \
 		PACKAGE=$(PACKAGE) \
@@ -134,12 +135,23 @@ deb_build: display deb-file-extract-list Dockerfile_DEB
 		--tag $(CONTAINER_TAG) .
 	touch .deb_dockerimage
 
+vsdk-cp vsdk-g++ vsdk-make: vsdk-bash
+	rm -f $@ ; ln vsdk-bash $@
+
+.PHONY: commands
+commands: vsdk-cp vsdk-g++ vsdk-make
+
+# we'll need the pathname of this working directory when
+# testing with vsdk-make
+THIS_DIR := $(realpath .)
+
 .PHONY: test
-test:
+test: commands
 	rm -rf tmp-test
 	mkdir tmp-test
-	vsdk-cp -r /opt/vertica/sdk/examples tmp-test
-	cd tmp-test/examples && vsdk-make \
+	./vsdk-cp -r /opt/vertica/sdk/examples tmp-test
+	cd tmp-test/examples && \
+		$(THIS_DIR)/vsdk-make \
 		ScalarFunctions \
 		TransformFunctions \
 		AnalyticFunctions \
