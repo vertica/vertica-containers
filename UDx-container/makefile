@@ -84,13 +84,15 @@ ifeq ($(TARGET), rpm)
 		PACKAGE=$(PACKAGE) \
 		TARGET=$(TARGET) \
 		VERTICA_VERSION=$(VERTICA_VERSION) \
-		OS_VERSION=$(CONTAINER_OS_VERSION)
+		OS_VERSION=$(CONTAINER_OS_VERSION) \
+		SUFFIX=${SUFFIX}
 else ifeq ($(TARGET), deb)
 	$(MAKE) deb_build \
 		PACKAGE=$(PACKAGE) \
 		TARGET=$(TARGET) \
 		VERTICA_VERSION=$(VERTICA_VERSION) \
-		OS_VERSION=$(CONTAINER_OS_VERSION)
+		OS_VERSION=$(CONTAINER_OS_VERSION) \
+		SUFFIX=${SUFFIX}
 else
 	$(error "TARGET not set to 'rpm' or 'deb'")
 endif
@@ -105,11 +107,12 @@ display:
 	$(info CONTAINER_TAG: $(CONTAINER_TAG))
 
 .PHONY: rpm_build
-rpm_build: display Dockerfile_RPM
+# Defining ${SUFFIX} makes it easier to try variations on the Dockerfile_RPM
+rpm_build: display Dockerfile_RPM${SUFFIX}
 	$(info VERTICA_RPM: $(PACKAGE))
 	$(info CONTAINER_OS_VERSION: $(CONTAINER_OS_VERSION))
 	docker build \
-		-f Dockerfile_RPM \
+		-f Dockerfile_RPM${SUFFIX} \
 		--build-arg RPM=$(PACKAGE) \
 		--build-arg os_version=$(CONTAINER_OS_VERSION) \
 		--build-arg vertica_version=$(VERTICA_VERSION) \
@@ -124,11 +127,12 @@ deb-file-extract-list: $(PACKAGE) file-patterns make-deb-file-extract-list
 	sh ./make-deb-file-extract-list $(PACKAGE)
 
 .PHONY: deb_build
-deb_build: display deb-file-extract-list Dockerfile_DEB 
+# Defining ${SUFFIX} makes it easier to try variations on the Dockerfile_DEB
+deb_build: display deb-file-extract-list Dockerfile_DEB${SUFFIX}
 	$(info VERTICA_DEB: $(PACKAGE))
 	$(info CONTAINER_OS_VERSION: $(CONTAINER_OS_VERSION))
 	docker build \
-		-f Dockerfile_DEB \
+		-f Dockerfile_DEB${SUFFIX} \
 		--build-arg DEB=$(PACKAGE) \
 		--build-arg os_version=$(CONTAINER_OS_VERSION) \
 		--build-arg vertica_version=$(VERTICA_VERSION) \
