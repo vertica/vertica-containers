@@ -126,6 +126,7 @@ Run `make test` with the `TARGET` environment variable:
 ```shell
 $ make test TARGET=deb
 ```
+Note that the scripts need to know the tag for the container, which is derived from the VERTICA_VERSION environment variable.  If you have a canonically-named RPM or .deb, the makefile knows how to extract the VERTICA_VERSION from the filename, otherwise you will have to specify it, just as you did when you created the container.
 
 
 ### Compiling UDxs
