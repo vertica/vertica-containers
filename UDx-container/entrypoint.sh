@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 # -*- mode: shell-script -*-
 # (c) Copyright [2021] Micro Focus or one of its affiliates.
@@ -130,7 +130,7 @@ case $vsdk_cmd in
         while [ "${STOP_LOOP}" == "false" ]; do
             # We could use admintools -t show_active_db to see if the
             # db is still running, and restart it if it isn't
-            sleep 1
+            sleep 10
         done
         ;;
     *)

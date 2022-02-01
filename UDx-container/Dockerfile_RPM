@@ -28,11 +28,11 @@ ARG vertica_db_group="verticadba"
 ARG dbadmin_gid=1000
 ARG dbadmin_id=1000
 
+# name of .rpm file
 ARG RPM
 ARG vertica_version
 
 COPY $RPM /tmp/$RPM
-
 
 # this is a script which removes unnecessary stuff from the
 # container image
@@ -126,6 +126,7 @@ RUN chmod -R g+w ${VERTICA_OPT_DIR}
 RUN sh /tmp/cleanup.sh
 
 ############################################################################
+ARG os_version="7.9.2009"
 FROM centos:${os_version}
 
 ARG vertica_db_user="dbadmin"
@@ -141,8 +142,6 @@ ENV VERTICA_VOLUME_DIR="/data"
 ENV VERTICA_DATA_DIR="${VERTICA_VOLUME_DIR}/vertica"
 ENV VERTICA_DB_NAME="vsdk"
 ENV PYTHON_EGG_CACHE="/tmp/.python-eggs"
-ENV ENTRYPOINT_SCRIPT="docker-entrypoint.sh"
-ENV ENTRYPOINT_SCRIPT_PATH="${VERTICA_HOME_DIR}/${ENTRYPOINT_SCRIPT}"
 
 COPY --from=builder $VERTICA_OPT_DIR $VERTICA_OPT_DIR
 COPY --from=builder $VERTICA_DATA_DIR $VERTICA_DATA_DIR
