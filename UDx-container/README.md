@@ -111,10 +111,6 @@ Use environment variables to provide additional information to the `vsdk-*` comm
 | VSDK_ENV | Optional file that defines environment variables for `vsdk-*` commands that run in the container. For formatting details, see [Declare default environment variables in file](https://docs.docker.com/compose/env-file/) in the Docker documentation.|
 | VSDK_MOUNT | A list of one or more directories that you want to mount in the UDx container filesystem. To mount multiple directories, separate each path with a space. For additional details, see [Mounting additional files](#mounting-additional-files). |
 
-### Testing your UDx
-
-
-
 ### Compiling UDxs
 
 After you [test your UDx container](#testing-the-container), you can develop UDxs in the current working directory on the host machine and compile them in the UDx container. Use the `vsdk-make` script to execute your makefile and compile your UDx. In a new environment, `vsdk-make` mounts the same directories as the `make test` command.
@@ -165,22 +161,49 @@ In the previous diagram:
    $ VSDK_MOUNT='/usr/share/lib /usr/share/vtoolB' vsdk-make
    ```
 
+## Loading the UDx into a test Vertica server
 
-## Loading the UDx into Vertica
+### Making your UDx accessible to the test Vertica server
 
-The UDx container is not writable, so you need a different Vertica environment to test your compiled UDx functions. You can test your UDx using the Vertica Community Edition (CE) container. Download the [vertica/vertica-ce](https://hub.docker.com/r/vertica/vertica-ce) image from Dockerhub, or build a custom image with the [one-node-ce repository](#). The container must run the same Vertica version that you used to compile your UDxs.
+Start the server in your UDx working directory so when the container for the test Vertica server starts and it mounts its current working directory it has a path to your UDx working directory.  The Vertica in the container runs as dbadmin
 
-Mount the directory containing your compiled UDx into the CE container. Use the `start-vertica.sh` script that is available in the `one-node-ce` sibling repository to start the container and mount your UDx directory in the CE container filesystem:
+
+### Starting the test Vertica server
+
+In addition to the "apps" `vsdk-make`, `vsdk-g++`, etc., there is a `vsdk-vertica` command which creates a scratch Vertica server for you to test your UDx.
+
+The UDx container itself is not writable, so it creates and mounts a Docker volume called verticasdk-data.  It also mounts the current working directory and your home directory in the container (with the same name those directories have on the host machine).  In addition, `vsdk-vertica` understands the `VSDK_MOUNT` and `VSDK_ENV` environment variables described in [environment variable](#environment-variables).
+
+`vsdk-vertica` launches a server that runs in the background in a container named `verticasdk`.  You can read the container log using the command:
+
+#### The test Vertica server startup log
 
 ```shell
-$ ../one-node-ce/start-vertica.sh -d . -v host:container
+docker logs verticasdk
 ```
 
-In the previous example:
-- `host` is the directory on your host machine that that contains your compiled UDx library.
-- `container` is the mount point in the CE container filesystem
+#### Stopping and removing the test Vertica server
 
-When Vertica in the CE container is ready, you can use `vsql` to load the UDx. The following command loads the `AggregateFunctions` library and execute some functions from it:
+When you are done using the container, you can stop it:
+
+```shell
+docker stop verticasdk
+```
+and remove it:
+
+```shell
+docker rm verticasdk
+```
+
+When you are done with the container, it is probably a good idea to also remove the Docker volume it mounts as a scratch database:
+
+```shell
+docker volume rm verticasdk-data
+```
+
+### Loading your UDx into the test Vertica server
+
+When the test Vertica server is ready, you can use `vsql` to load the UDx. The following command loads the `AggregateFunctions` library and execute some functions from it:
 
 ```shell
 $ cd tmp-test/examples
