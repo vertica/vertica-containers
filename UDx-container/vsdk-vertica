@@ -43,8 +43,13 @@
 #       needs to be formatted for that option
 
 # The user can override the OS selection by defining OSTAG in the
-# environment (mostly for testing)
-. /etc/os-release
+# environment (mostly for testing).
+# /etc/os-release doesn't exist on MacOS
+[ -r /etc/os-release ] && . /etc/os-release
+
+# Why so elaborate?  Mostly to handle various potential error
+# conditions, plus simplify symlinks.
+# See https://stackoverflow.com/questions/59895/how-can-i-get-the-source-directory-of-a-bash-script-from-within-the-script-itsel
 
 case $ID in
     rhel) OSTAG=${OSTAG:=centos} ;;
@@ -62,9 +67,11 @@ case $OSTAG in
         ;;
 esac
 
-V_VERSION=${VERTICA_VERSION:=11.0.0-0}
+SCRIPT_DIR="$( cd `dirname "${BASH_SOURCE[0]}"` &> /dev/null && pwd )"
+. ${SCRIPT_DIR}/set_container_path
+
 IMAGE_NAME=verticasdk
-TAG=$OSTAG-$V_VERSION
+TAG=$OSTAG-${VERTICA_VERSION:-11.0.0-0}
 
 CONTAINER_NAME=verticasdk
 DVOL=verticasdk-data 
@@ -81,21 +88,7 @@ if [ "$VSDK_ENV"x != x ]; then
     VSDK_ENV_FILE_OPTION="--env-file $VSDK_ENV"
 fi
 
-CONTAINER_PATH=/opt/rh/rh-nodejs8/root/usr/bin
-CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/bin
-CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/sbin
-CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/rh-git218/root/usr/bin
-CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/devtoolset-7/root/usr/bin
-CONTAINER_PATH=$CONTAINER_PATH:/usr/lib64/ccache
-CONTAINER_PATH=$CONTAINER_PATH:${BINDIR}
-CONTAINER_PATH=$CONTAINER_PATH:${ALSO_IN_PATH}
-CONTAINER_PATH=$CONTAINER_PATH:/sbin
-CONTAINER_PATH=$CONTAINER_PATH:/usr/sbin
-CONTAINER_PATH=$CONTAINER_PATH:/usr/local/bin
-CONTAINER_PATH=$CONTAINER_PATH:/usr/local/sbin
-
 user_id=`id -u`
-HOSTNAME=vsdk-$USER
 
 function usage_exit() {
     cat <<EOF
@@ -148,7 +141,8 @@ docker run \
        --mount type=volume,source=$DVOL,target=/data \
        -p 5433:5433 \
        -p 5444:5444 \
-       -d $VFLAG \
+       -d \
+       $VFLAG \
        --name $CONTAINER_NAME \
        $IMAGE_NAME:$TAG \
        ${CURDIR} \

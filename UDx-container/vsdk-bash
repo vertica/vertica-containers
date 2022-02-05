@@ -51,6 +51,11 @@ PROG=`basename $0`
 # The user can override the OS selection by defining OSTAG in the
 # environment (mostly for testing)
 . /etc/os-release
+
+# Why so elaborate?  Mostly to handle various potential error
+# conditions, plus simplify symlinks.
+# See https://stackoverflow.com/questions/59895/how-can-i-get-the-source-directory-of-a-bash-script-from-within-the-script-itsel
+
 case $ID in
     rhel) OSTAG=${OSTAG:=centos} ;;
     ubuntu) OSTAG=${OSTAG:=ubuntu} ;;
@@ -67,9 +72,12 @@ case $OSTAG in
         ALSO_IN_PATH=/usr/bin
         ;;
 esac
-V_VERSION=${VERTICA_VERSION:=11.0.0-0}
-CONTAINER_TAG=verticasdk:$OSTAG-$V_VERSION
+CONTAINER_TAG=${CONTAINER_TAG:-verticasdk:$OSTAG-${VERTICA_VERSION:-11.0.0-0}}
 DVOL=verticasdk-data 
+
+# must follow the definition of BINDIR
+SCRIPT_DIR="$( cd `dirname "${BASH_SOURCE[0]}"` &> /dev/null && pwd )"
+. ${SCRIPT_DIR}/set_container_path
 
 INTERACTIVE=
 case $PROG in
@@ -115,24 +123,16 @@ HOSTNAME=vsdk-$USER
 
 #         --env LD_LIBRARY_PATH=/opt/vertica/lib 
 
-# this would be an include file, except I don't know how to find
-# the file if I'm in a different directory
-
-CONTAINER_PATH=/opt/rh/rh-nodejs8/root/usr/bin
-CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/bin
-CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/sbin
-CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/rh-git218/root/usr/bin
-CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/devtoolset-7/root/usr/bin
-CONTAINER_PATH=$CONTAINER_PATH:/usr/lib64/ccache
-CONTAINER_PATH=$CONTAINER_PATH:${BINDIR}
-CONTAINER_PATH=$CONTAINER_PATH:${ALSO_IN_PATH}
-CONTAINER_PATH=$CONTAINER_PATH:/sbin
-CONTAINER_PATH=$CONTAINER_PATH:/usr/sbin
-CONTAINER_PATH=$CONTAINER_PATH:/usr/local/bin
-CONTAINER_PATH=$CONTAINER_PATH:/usr/local/sbin
-
-
 CURDIR=`/bin/pwd`
+
+# We need to get any quoted strings into the entrypoint.sh as quoted
+# strings.  That is, if an argument to this script has a space in it
+# entrypoint.sh needs to see it as an argument with a space in it.
+COMMAND="$CMD"
+for arg in "$@"; do
+    COMMAND="$COMMAND \"$arg\""
+done
+
 docker run \
        $INTERACTIVE \
        -e PATH=$CONTAINER_PATH \
@@ -146,4 +146,4 @@ docker run \
        $VSDK_ENV_FILE_OPTION \
        $CONTAINER_TAG \
        $CURDIR \
-       "$CMD $*"
+       "$COMMAND"

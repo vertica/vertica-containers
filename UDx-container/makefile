@@ -153,12 +153,13 @@ THIS_DIR := $(realpath .)
 test: commands
 	rm -rf tmp-test
 	mkdir tmp-test
-	VERTICA_VERSION=$(VERTICA_VERSION) ./vsdk-cp -r /opt/vertica/sdk/examples tmp-test
+	VERTICA_VERSION=$(VERTICA_VERSION) \
+		./vsdk-cp -r /opt/vertica/sdk/examples tmp-test
 	cd tmp-test/examples && \
 		VERTICA_VERSION=$(VERTICA_VERSION) \
 		$(THIS_DIR)/vsdk-make \
-		ScalarFunctions \
-		TransformFunctions \
-		AnalyticFunctions \
-		AggregateFunctions \
-		UserDefinedLoad
+			ScalarFunctions \
+			TransformFunctions \
+			AnalyticFunctions \
+			AggregateFunctions \
+			UserDefinedLoad

@@ -22,8 +22,8 @@
 # container. 
 
 VSQL=/opt/vertica/bin/vsql
-vsdk_dir=$1
-vsdk_cmd=$2
+vsdk_dir="$1"
+vsdk_cmd="$2"
 
 ADMINTOOLS="${VERTICA_OPT_DIR}/bin/admintools"
 
@@ -92,9 +92,6 @@ function initialize_vertica_directories() {
                       --data_path=${VERTICA_DATA_DIR}
 
         echo
-        echo 'Loading VMart schema ...'
-        ${VMART_DIR}/${VMART_ETL_SCRIPT}
-
         if [ -n "${APP_DB_USER}" ]; then
             create_app_db_user
         fi
@@ -134,8 +131,6 @@ case $vsdk_cmd in
         done
         ;;
     *)
-        echo VSDK: cd \"$vsdk_dir\"
-        echo VSDK: sh -c \"$vsdk_cmd\"
         cd "$vsdk_dir"
         sh -c "$vsdk_cmd"
         ;;

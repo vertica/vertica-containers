@@ -29,7 +29,6 @@ ENV VERTICA_DB_NAME="vsdk"
 
 ARG vertica_db_user="dbadmin"
 ARG vertica_db_group="verticadba"
-ARG vertica_db_name="VMart"
 ARG dbadmin_gid=1000
 ARG dbadmin_id=1000
 
