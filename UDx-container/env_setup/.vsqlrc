@@ -1,0 +1,28 @@
+--
+--      vsql configuration file
+--
+-- see https://docs.oracle.com/cd/E36784_01/html/E36883/teclarc-5.html for more details
+
+\# tecla line editing configuration options
+\edit-mode emacs                        # emacs, vi or none
+\bind ^R history-search-backward        # tecla standard is redisplay
+
+\# Key binding, which does not work by default
+\bind [1;5C forward-word
+\bind [1;5D backward-word
+\bind [3~ forward-delete-char
+\# for linux console and RH/Debian xterm
+\bind [1~ beginning-of-line
+\bind [4~ end-of-line
+\# for freebsd console
+\bind [H beginning-of-line
+\bind [F end-of-line
+
+\# Elapsed time is displayed after each executed query
+\timing
+
+\# Display all rows, do not break displaying after X rows and wait for key press
+\pset pager off
+
+\# Fancy prompt in vsql
+\set PROMPT1 '%n@%`hostname`(%x)%R%# '

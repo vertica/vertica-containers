@@ -11,17 +11,163 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-###########################################################################
+##############################################################################
 
 # Base operating system
 ARG os_version="7.9.2009"
 
-FROM centos:${os_version}
+FROM centos:${os_version} as builder
 
+ENV VERTICA_OPT_DIR="/opt/vertica"
+ENV VERTICA_VOLUME_DIR="/data"
+ENV VERTICA_DATA_DIR="${VERTICA_VOLUME_DIR}/vertica"
+ENV VERTICA_DB_NAME="vsdk"
+
+ARG vertica_db_user="dbadmin"
+ARG vertica_db_group="verticadba"
+ARG dbadmin_gid=1000
+ARG dbadmin_id=1000
+
+# name of .rpm file
 ARG RPM
 ARG vertica_version
 
-RUN bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then yum install -q -y dnf-plugins-core; yum -q config-manager --set-enabled powertools; yum -q -y install glibc-locale-source; fi" \
+COPY $RPM /tmp/$RPM
+
+# this is a script which removes unnecessary stuff from the
+# container image
+COPY ./tools/cleanup.sh /tmp/
+COPY ./tools/package-checksum-patcher.py /tmp/
+COPY ./tools/init.d.functions /etc/rc.d/init.d/functions
+
+# Install prerequisites and Vertica
+    # Update is needed to be confident that we're picking up
+    # fixed libraries.  We depend on malware check of container afterwards 
+# this creates multiple layers, but the many layers will be taken care of
+# when we switch to the next stage of the build
+RUN bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then yum install -q -y dnf-plugins-core; yum -q config-manager --set-enabled powertools; yum -q -y install glibc-locale-source; fi" 
+ # Create DB user and group in OS. Fix their ID, so they match in the following stage
+RUN yum -q -y update \
+    && yum -y update --security \
+    && yum -q -y makecache \
+    # CentOS 8
+    && yum install -y \
+           yum-utils \
+           centos-release-scl \
+    && yum clean all \
+    && yum-config-manager --enable rhel-server-rhscl-7-rpms \
+    && yum install -y \
+# Packages needed to install Vertica
+        cronie \
+        dialog \
+        gcc-c++ \
+        glibc-static \
+        gdb \
+        iproute \
+        libstdc++-static \
+        make \
+        mcelog \
+        openssh-server \
+        openssh-clients \
+        openssl \
+        sudo \
+        sysstat \
+        wget \
+        which 
+
+RUN yum localinstall -q -y /tmp/$RPM
+ # Cleanup to optimize the size of final image
+RUN rm -rf ${VERTICA_OPT_DIR}/lib64 
+
+ # CentOS 8 - fixes issue "Unsupported locale character encoding: use
+ # a utf8 locale, not a ANSI_X3.4-1968 locale" 
+RUN bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then localedef -i en_US -f UTF-8 en_US.UTF-8; fi" 
+# Create DB user in OS and create python egg cache dir under this user
+# Run install_vertica script to prepare environment
+RUN mkdir -p ${VERTICA_DATA_DIR} \
+     && /usr/sbin/groupadd -r -g $dbadmin_gid $vertica_db_group \
+     # While it is true that install_vertica creates $vertica_db_user
+     # and $vertica_db_group we do it by hand here in order to be able
+     # to specify the UID of the $vertica_db_user  
+     && /usr/sbin/useradd -r \
+                          -m \
+                          -s /bin/bash \
+                          --uid $dbadmin_id \
+                          -g $vertica_db_group \
+                          $vertica_db_user \
+ && ${VERTICA_OPT_DIR}/sbin/install_vertica \
+                      --accept-eula \
+                      --data-dir $VERTICA_DATA_DIR \
+                      --dba-group $vertica_db_group \
+                      --dba-user $vertica_db_user \
+                      --dba-user-password-disabled \
+                      --debug \
+                      --failure-threshold NONE \
+                      --hosts 127.0.0.1 \
+                      --ignore-aws-instance-type \
+                      --ignore-install-config \
+                      --license CE \
+                      --no-system-configuration \
+                      --point-to-point \
+                      --no-ssh-key-install \
+                      -U
+
+COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
+
+RUN chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \
+    && chown -R $vertica_db_user:$vertica_db_group /home/$vertica_db_user
+
+# docker daemons versions < 19.03 don't preserve ownership on COPY --from
+# but doing the chown -R in the second half is costly in terms of
+# image size, so we compromise by making everything group writable in
+# /opt/vertica:
+RUN chmod -R g+w ${VERTICA_OPT_DIR}
+
+RUN sh /tmp/cleanup.sh
+
+############################################################################
+ARG os_version="7.9.2009"
+FROM centos:${os_version}
+
+ARG vertica_db_user="dbadmin"
+ARG vertica_db_group="verticadba"
+
+ARG dbadmin_gid=1000
+ARG dbadmin_id=1000
+
+ENV VERTICA_OPT_DIR="/opt/vertica"
+ENV VERTICA_OPT_BIN="${VERTICA_OPT_DIR}/bin"
+ENV VERTICA_HOME_DIR="/home/$vertica_db_user"
+ENV VERTICA_VOLUME_DIR="/data"
+ENV VERTICA_DATA_DIR="${VERTICA_VOLUME_DIR}/vertica"
+ENV VERTICA_DB_NAME="vsdk"
+ENV PYTHON_EGG_CACHE="/tmp/.python-eggs"
+
+COPY --from=builder $VERTICA_OPT_DIR $VERTICA_OPT_DIR
+COPY --from=builder $VERTICA_DATA_DIR $VERTICA_DATA_DIR
+
+ADD ./tools/package-checksum-patcher.py /tmp/
+ADD ./tools/init.d.functions /etc/rc.d/init.d/functions
+
+# Recreate DB user in OS and create python egg cache dir under this user
+# in this stage of the build, we want to reduce the number of layers
+RUN set -x \
+    # COPY doesn't preserve the mode of the top-level
+    && chmod g+w ${VERTICA_OPT_DIR} \
+    && /usr/sbin/groupadd -r -g $dbadmin_gid $vertica_db_group \
+    && /usr/sbin/useradd -r \
+                          -m \
+                          -s /bin/bash \
+                          --uid $dbadmin_id \
+                          # add dbadmin to root to work around COPY
+                          # not preserving owner and group prior to
+                          # docker version 19.03
+                          -G root \
+                          -g $vertica_db_group \
+                          $vertica_db_user \
+    && su - $vertica_db_user -c "mkdir $PYTHON_EGG_CACHE" \
+# Install prerequisites, create Vertica data dir, set privileges, document
+# fix timezone issue and generate locales in case of centOS 8 
     && yum -q -y update \
     && yum -y update --security \
     && yum -q -y makecache \
@@ -31,99 +177,124 @@ RUN bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then yum install -q -y dnf-plu
            centos-release-scl \
     && yum clean all \
     && yum-config-manager --enable rhel-server-rhscl-7-rpms \
- # Packages needed to build Vertica UDxes
-    && yum install -y \
-           binutils \
-           boost \
-           bzip2-devel \
-           compat-libgfortran-41 \
-           cmake \
-           devtoolset-7-binutils \
-           devtoolset-7-binutils-devel \
-           devtoolset-7-elfutils \
-           devtoolset-7-elfutils-libelf \
-           devtoolset-7-elfutils-libs \
-           devtoolset-7-gcc \
-           devtoolset-7-gcc-c++ \
-           devtoolset-7-gcc-gfortran \
-           devtoolset-7-gdb \
-           devtoolset-7-libasan-devel \
-           devtoolset-7-libquadmath-devel \
-           devtoolset-7-libstdc++-devel \
-           devtoolset-7-oprofile \
-           devtoolset-7-runtime \
-           devtoolset-7-strace \
-           devtoolset-7-valgrind \
-           devtoolset-7-valgrind-devel \
-           devtoolset-7-libubsan-devel \
-           devtoolset-7-libtsan-devel \
-           devtoolset-7-liblsan-devel \
-           devtoolset-7-libasan-devel \
-           doxygen \
-           expat \
-           flex \
-           gcc \
-           gcc-c++ \
-           gettext \
-           glibc-devel \
-           glibc-headers \
-           glibc-static \
-           glibc-utils \
-           imake \
-           libcurl-devel \
-           "libgfortran-*" \
-           "libgomp-*" \
-           libtool \
-           libacl-devel \
-           make \
-           nasm \
-           # TODO: should use Vertica's own openssl headers, except
-           # that we don't put them into the RPM
-           openssl-devel \
-           readline-devel \
-           sudo \
-           tar \
-           && yum clean all \
-           && rm -rf /var/cache/yum
+ # CentOS 8
+ && bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then yum install -q -y dnf-plugins-core; yum -q config-manager --set-enabled powertools; yum -q -y install glibc-locale-source; localedef -i en_US -f UTF-8 en_US.UTF-8; fi" \
+     && yum install -y \
+        cronie \
+        dialog \
+        gdb \
+        iproute \
+        libstdc++-static \
+        mcelog \
+        openssh-server \
+        openssh-clients \
+        openssl \
+        sudo \
+        sysstat \
+        wget \
+        which \
+        # Packages needed to build Vertica UDxes
+        binutils \
+        boost \
+        bzip2-devel \
+        compat-libgfortran-41 \
+        cmake \
+        devtoolset-7-binutils \
+        devtoolset-7-binutils-devel \
+        devtoolset-7-elfutils \
+        devtoolset-7-elfutils-libelf \
+        devtoolset-7-elfutils-libs \
+        devtoolset-7-gcc \
+        devtoolset-7-gcc-c++ \
+        devtoolset-7-gcc-gfortran \
+        devtoolset-7-gdb \
+        devtoolset-7-libasan-devel \
+        devtoolset-7-libquadmath-devel \
+        devtoolset-7-libstdc++-devel \
+        devtoolset-7-oprofile \
+        devtoolset-7-runtime \
+        devtoolset-7-strace \
+        devtoolset-7-valgrind \
+        devtoolset-7-valgrind-devel \
+        devtoolset-7-libubsan-devel \
+        devtoolset-7-libtsan-devel \
+        devtoolset-7-liblsan-devel \
+        devtoolset-7-libasan-devel \
+        doxygen \
+        expat \
+        flex \
+        gcc \
+        gcc-c++ \
+        gettext \
+        glibc-devel \
+        glibc-headers \
+        glibc-static \
+        glibc-utils \
+        imake \
+        libcurl-devel \
+        "libgfortran-*" \
+        "libgomp-*" \
+        libtool \
+        libacl-devel \
+        make \
+        nasm \
+        # TODO: should use Vertica's own openssl headers, except
+        # that we don't put them into the RPM
+        openssl-devel \
+        readline-devel \
+        sudo \
+        tar \
+        && yum clean all \
+        && rm -rf /var/cache/yum \
+     # Allow passwordless sudo access from dbadmin
+     && echo "$vertica_db_user ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers \
+     # docker daemons versions < 19.03 don't preserve ownership on COPY --from
+     # so we have to chown these things again
+     && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_DATA_DIR} \
+         && chown -R $vertica_db_user:$vertica_db_group /home/$vertica_db_user \
+     # but this chown is expensive in image-size, so we use aother
+     # trick in the first half of the build 
+     # && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \
+ # Link OS timezones, check entrypoint script
+ # && rm -rf ${VERTICA_OPT_DIR}/share/timezone \
+ # && ln -sT /usr/share/zoneinfo ${VERTICA_OPT_DIR}/share/timezone \
+         && yum clean all \
+         && rm -rf /var/cache/yum 
 
-COPY $RPM /tmp/$RPM
-
-# fortunately, this runs in /, so the files get extracted into
-# /opt/... where they belong  
-RUN rpm2cpio /tmp/$RPM \
-    | cpio --extract --make-directories --preserve-modification-time -v \
-    # all of bin and sbin are perhaps overkill
-    "./opt/vertica/bin/*" \
-    "./opt/vertica/sbin/*" \
-    ./opt/vertica/lib/libAutopassCrypto64.so \
-    "./opt/vertica/lib/libcom_err.so*" \
-    "./opt/vertica/lib/libcrypto.so*" \
-    ./opt/vertica/lib/libdefaultmalloc.so \
-    ./opt/vertica/lib/libdummymalloc.so \
-    "./opt/vertica/lib/libgssapi_krb5.so*" \
-    ./opt/vertica/lib/libjemalloc.so \
-    "./opt/vertica/lib/libk5crypto.so*" \
-    "./opt/vertica/lib/libkrb5.so*" \
-    "./opt/vertica/lib/libkrb5support.so*" \
-    ./opt/vertica/lib/liblmx64.so \
-    "./opt/vertica/lib/libssl.so*" \
-    ./opt/vertica/lib/libtcmalloc_minimal.so \
-    ./opt/vertica/lib/libvmalloc.so \
-    # sdk libraries
-    "./opt/vertica/sdk/*" \
-    # Enable devtoolset by default for users
-    && ln -s /opt/rh/devtoolset-7/enable /etc/profile.d/enable-devtools.sh \
+# Enable devtoolset by default for users
+RUN ln -s /opt/rh/devtoolset-7/enable /etc/profile.d/enable-devtools.sh \
     # Use ld.gold; faster link times
     && ln -sf /opt/rh/devtoolset-7/root/usr/bin/ld.gold /opt/rh/devtoolset-7/root/etc/alternatives/ld
 
+# vertica v10 (and earlier, but 10 is what we're interested in enough
+# to test) vertica_agent script uses the rpm command to find out where
+# Vertica is installed.  But we threw the 900-1200 MB of rpm info away
+# when we did the multi-stage build.  v11 and subsequent used a
+# different technique more compatible with what we're doing with
+# containers 
+ADD ./tools/vertica_agent.11 /tmp/
+ADD ./tools/vertica_agent_patch.sh /tmp/
+RUN bash /tmp/vertica_agent_patch.sh
+
+ADD ./env_setup/vertica_env.sh /etc/profile.d/
 COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
 
-RUN rm -f /tmp/$RPM
+# DB is running under vertica_db_user, not under root
+USER $vertica_db_user
 
-ENTRYPOINT [ "/opt/vertica/bin/entrypoint.sh" ]
+WORKDIR ${VERTICA_HOME_DIR}
 
-LABEL image_name="vertica_udx"
-LABEL os_family="Centos"
-LABEL os_version="$os_version"
-LABEL vertica_version="$vertica_version"
+VOLUME ${VERTICA_VOLUME_DIR}
+
+ENTRYPOINT  [ "/opt/vertica/bin/entrypoint.sh" ]
+
+# vertica port
+EXPOSE 5433
+# vertica agent port
+EXPOSE 5444
+
+LABEL image_name="vertica_udx_development"
+LABEL os_family="$CONTAINER_OS"
+LABEL os_version="$CONTAINER_OS_VERSION"
+LABEL vertica_version="$VERTICA_VERSION"
 LABEL maintainer="K8 Team"
