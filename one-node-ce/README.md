@@ -95,15 +95,13 @@ After `Dockerfile_<distro>` installs the RPM or DEB file, it runs `tools/cleanup
 
 # Testing with ./run_tests.sh
 
-Once you have built your container, you can test it using the `./run_tests.sh` script (or by running `make test`).
+Once you have built your container, you can test it using the `./run_tests.sh` script (or by running `make test`). The `./run_tests.sh` script verifies that the container can execute Vertica and some of the additional libraries. This script requires a [local copy of the vsql client](#getting-a-local-copy-of-vsql). 
 
-The `./run_tests.sh` script verifies that the container can execute Vertica and some of the additional libraries. This script requires a [local copy of the vsql client](#getting-a-local-copy-of-vsql). 
+The `./run_tests.sh` script uses the normal Vertica port number, so you must stop any existing Vertica server (container or otherwise) on your test system before you test your container.
 
-Before you test your container, you must stop any existing Vertica server (container or otherwise) on your test system because the `./run_tests.sh` script uses the normal Vertica port number.
+The test uses your image to create a new container with a unique tag and volume. Because the test sets up the optional libraries and creates the VMart database, creating a new container can take up to three minutes.
 
-The test uses your image to create a new container with a unique tag, and volume. Because the test sets up the optional libraries and creates the VMart database, creating a new container can take as long as three minutes.
-
-If the tests pass, "All tests passed" appears at the end of the output, and the script exits with a 0 exit status. If the test fails with errors, the output contains `ERROR: <description>`, where `<description>` is a description of the error.
+If the tests pass, `All tests passed` appears at the end of the output, and the script exits with a 0 exit status. If the test fails with errors, the output contains `ERROR: <description>`, where `<description>` is a description of the error.
 
 You can run the script with the `-k` argument to retain the container and make it available for examination:
 
@@ -189,9 +187,9 @@ If you used the `start-vertica.sh` script to [start the server instance](#start-
 ./run-shell-in-container.sh [-d directory-for-cid.txt] [-n container-name] [-u uid] [-h ] [ ? ]
 ```
 
-One needs to specify either `-d directory-for-cid.txt` or `-n container-name` (e.g., `-n vertica_ce`).
+You must specify either `-d directory-for-cid.txt` or `-n container-name` (e.g., `-n vertica_ce`).
 
-`-u uid` specifies what user runs inside the container --- you probably want to use DBADMIN_ID (default 1000), since that user has proper access to Vertica directories inside the container.
+`-u uid` specifies what user runs inside the container. Vertica recommends that you use DBADMIN_ID (default 1000), because that user has proper access to Vertica directories inside the container.
 
 **NOTE**: If you have a [local copy](#getting-a-local-copy-of-vsql) of `vsql`, you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/AdminTools/WritingAdministrationToolsScripts.htm).
 
@@ -209,26 +207,30 @@ You can access a container shell and vsql with a single command:
 docker exec -it <container_name> /opt/vertica/bin/vsql
 ```
 
-### View container logs
+### Viewing container logs
 
-You can use **cid.txt** with the `docker logs` command:
+Retrieve the container logs with the `docker logs` command.
+
+The following command uses **cid.txt**:
 
 ```shell
 docker logs `cat cid.txt`
 ```
-... or use the container name to view the logs. For example, the following command fetches the logs for a container named **vertica_ce**:
+The following command fetches the logs for a container named **vertica_ce**:
 
 ```shell
-docker stop vertica_ce
+docker logs vertica_ce
 ```
-### Stop the container
+### Stopping the container
 
-You can use **cid.txt** with the `docker stop` command:
+Stop the container with the `docker stop` command.
+
+The following command uses **cid.txt**:
 
 ```shell
 docker stop `cat cid.txt`
 ```
-... or stop the container using the container name. For example, the following command stops a container named **vertica_ce**:
+The following command stops a container named **vertica_ce**:
 
 ```shell
 docker logs vertica_ce
@@ -277,9 +279,9 @@ The following table contains configurable environment variable parameters:
 
 | Environment Variable | Description | 
 | :--------------------| :-----------|
-| APP_DB_USER | Name of a database user, in addition to `vertica_db_user`. This user is created only when this variable is set. by default, this user receives [pseudosuperuser](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PSEUDOSUPERUSERRole.htm) privileges. |
+| APP_DB_USER | Name of a database user, in addition to `vertica_db_user`. This user is created only when this variable is set. By default, this user is assigned [pseudosuperuser](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PSEUDOSUPERUSERRole.htm) privileges. |
 | APP_DB_PASSWORD | Password for APP_DB_USER. If this is omitted, the password is empty. |
-| TZ: "${VERTICA_CUSTOM_TZ:-Europe/Prague}" | The database time zone.<br>**IMPORTANT**: Vertica does not contain all timezones. There is a commented-out workaround solution in each Dockerfile that begins "Link OS timezones". Uncomment the workaround to use time zones.<br>Setting the time zone with VERTICA_CUSTOM_TZ enables you to override it from your environment. |
+| TZ: "${VERTICA_CUSTOM_TZ:-Europe/Prague}" | The database time zone.<br>**IMPORTANT**: Vertica does not contain all timezones. Each Dockerfile contains a  commented-out workaround solution that begins "Link OS timezones". Uncomment the workaround to use time zones.<br>Setting the time zone with VERTICA_CUSTOM_TZ enables you to override it from your environment. |
 | DEBUG_FAILING_STARTUP | For development purposes. When you set the value to **y**, the entrypoint script does not end in case of failure, so you can investigate any failures. |
 
 ## References and Contributions

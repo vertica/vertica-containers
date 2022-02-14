@@ -165,16 +165,16 @@ In the previous diagram:
 
 ### Making your UDx accessible to the test Vertica server
 
-Start the server in your UDx working directory so when the container for the test Vertica server starts and it mounts its current working directory it has a path to your UDx working directory.  The Vertica in the container runs as dbadmin
+Start the server in your UDx working directory. This provides the container for the test Vertica server a path to your UDx working directory when it starts and it mounts its current working directory. The Vertica in the container runs as `dbadmin`.
 
 
 ### Starting the test Vertica server
 
-In addition to the "apps" `vsdk-make`, `vsdk-g++`, etc., there is a `vsdk-vertica` command which creates a scratch Vertica server for you to test your UDx.
+In addition to the tools such as `vsdk-make` and `vsdk-g++`, there is a `vsdk-vertica` command that creates a scratch Vertica server so you can test your UDx.
 
-The UDx container itself is not writable, so it creates and mounts a Docker volume called verticasdk-data.  It also mounts the current working directory and your home directory in the container (with the same name those directories have on the host machine).  In addition, `vsdk-vertica` understands the `VSDK_MOUNT` and `VSDK_ENV` environment variables described in [environment variable](#environment-variables).
+The UDx container itself is not writable, so it creates and mounts a Docker volume called `verticasdk-data`. It also mounts the current working directory and your home directory in the container using the same names those directories have on the host machine. In addition, `vsdk-vertica` understands the `VSDK_MOUNT` and `VSDK_ENV` environment variables described in [environment variable](#environment-variables).
 
-`vsdk-vertica` launches a server that runs in the background in a container named `verticasdk`.  You can read the container log using the command:
+`vsdk-vertica` launches a server that runs in the background in a container named `verticasdk`.  You can read the container log using the `docker logs` command.
 
 #### The test Vertica server startup log
 
@@ -231,4 +231,3 @@ Run `make test` with the `TARGET` environment variable:
 $ make test TARGET=deb
 ```
 Note that the scripts need to know the tag for the container, which is derived from the VERTICA_VERSION environment variable.  If you have a canonically-named RPM or .deb, the makefile knows how to extract the VERTICA_VERSION from the filename, otherwise you will have to specify it, just as you did when you created the container.
-
