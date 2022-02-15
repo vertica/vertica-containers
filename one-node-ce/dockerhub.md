@@ -4,13 +4,14 @@
 This is a single-node Docker [Community Edition](https://www.vertica.com/docs/latest/HTML/Content/Authoring/GettingStartedGuide/DownloadingAndStartingVM/DownloadingAndStartingVM.htm) image for Vertica. The base OS for the image is CentOS7.9.2009 with a Vertica Version 11.0.1 CE.
 
 # Supported Tags
-* 11.0.1-0, latest
+* 11.1.0-0, latest
+* 11.0.1-0
 * 11.0.0-0
 * 10.1.1-0
 
 # Quick Reference
 
-* [Official Vertica Documentation](https://www.vertica.com/docs/latest/HTML/Content/Home.htm)
+* [Vertica Documentation](https://www.vertica.com/docs/latest/HTML/Content/Home.htm)
 * Supported architectures: `amd64`
 
 # What is Vertica?
@@ -62,9 +63,12 @@ docker exec -it <container_name> /opt/vertica/bin/vsql
 
 ## Access the database via vsql/client:
 
-The `5433` and`5444` port will be mapped to your host, which means you need to leave this port unoccupied.
+The `5433` and`5444` ports will be mapped to your host, which means you need to leave these ports unoccupied.
 
-You can then access the database, either via vsql on the container, vsql on the host, or via an external client using the `5433` and`5444` port.
+You can then access the database in one of the following ways:
+- vsql on the container
+- vsql on the host
+- An external client using the `5433` and`5444` port
 
 ## Persisting data:
 This container mounts a Docker volume named `vertica-data` in the container as a persistent data store for the Vertica database. A Docker volume is used instead of a mounted host directory for the following reasons:
@@ -74,18 +78,18 @@ This container mounts a Docker volume named `vertica-data` in the container as a
 
 > **Note**: Docker volumes live on the host filesystem as directories. These directories are created automatically and stored at `/var/lib/docker/volumes/`. Each volume is stored under `./volumename/_data/`. This might limit the amount of data you can store in your database if that directory is on a small filesystem.
 
-You may also use a bind mount to another directory that is mounted on a sufficient disk, if you dont want to use docker volumes:
+You might also use a bind mount to another directory that is mounted on a sufficient disk, if you dont want to use docker volumes:
 ```sh
 docker run -p 5433:5433 -p 5444:5444\
            --mount type=bind,source=/<directory>,target=/data \
            --name vertica_ce \
            vertica/vertica-ce
 ```
-Make sure the user running `docker run` has enough privileges to read and write the source directory.
+Make sure the user running `docker run` has read and write privileges on the source directory.
 
 ## Use with Docker Compose:
 
-You may use the Docker image in with docker-compose. Following is an example:
+You can use the Docker image in with docker-compose. The following is an example YAML file:
 ```yaml
 version: "3.9"
 services:
@@ -114,7 +118,7 @@ Run `docker-compose up`:
 docker-compose --file ./docker-compose.yml --project-directory <directory_name> up -d
 ```
 
-> Note: We are yet to test integration of this with other services. So, we do not have more information on network setup.
+> **Note**: We have not tested this integration, so we do not have network setup recommendations.
 
 
 ## License:

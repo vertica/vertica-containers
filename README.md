@@ -8,7 +8,7 @@ For Vertica on Kubernetes containers and resources, see [vertica-kubernetes](htt
 
 ## [One-Node CE](https://github.com/vertica/vertica-containers/tree/main/one-node-ce)
 
-This directory provides instructions for building the containerized version of the [Vertica Community Edition (CE)](https://www.vertica.com/landing-page/start-your-free-trial-today/), a free, limited license that Vertica provides users so that they can get a hands-on introduction to the platform. For an overview, see the [Vertica documentation](https://www.vertica.com/docs/latest/HTML/Content/Authoring/GettingStartedGuide/DownloadingAndStartingVM/DownloadingAndStartingVM.htm).
+The One-Node CE directory gives instructions to build the containerized version of the [Vertica Community Edition (CE)](https://www.vertica.com/landing-page/start-your-free-trial-today/), a free, limited license that Vertica provides users as a hands-on introduction to the platform. For an overview, see the [Vertica documentation](https://www.vertica.com/docs/latest/HTML/Content/Authoring/GettingStartedGuide/DownloadingAndStartingVM/DownloadingAndStartingVM.htm).
 
 To build the One-Node CE, you must have a a licensed Vertica RPM or .deb file.
 
@@ -17,13 +17,13 @@ Vertica publishes the binary version of this container on [DockerHub](https://hu
 
 ## [UDx-container](https://github.com/vertica/vertica-containers/tree/main/UDx-container)
 
-This directory packages in a container the following resources required to build User-Defined eXtensions:
+The UDx-container directory packages in a container the following resources required to build User-Defined eXtensions:
 - C++-compiler
 - Libraries
 - Google protobuf compiler
 - Python interpreter
 - Tools to invoke the UDx
 
-As noted above, to build and install this container you need a copy of the Vertica RPM (or Vertica .deb file used at your site for your Vertica installation.
+As noted above, to build and install this container you need a copy of the Vertica RPM or .deb file used at your site for your Vertica installation.
 
 To build the UDx-container, you must have a a licensed Vertica RPM or .deb file.
