@@ -42,7 +42,7 @@ To build an image using this repository, you must store your Vertica RPM or DEB 
 If you do not have a Vertica RPM, register to download the free [Community Edition](https://www.vertica.com/try/) license. This is a limited license that allows you to create a three-node Vertica cluster with a maximum of 1TB of storage.
 
 ## Build the image with `Makefile`
-Vertica provides the `Makefile` script that creates an image with a [DBADMIN role](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PredefinedRoles.htm).
+This repository contains the `Makefile` script that creates an image with a [DBADMIN role](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PredefinedRoles.htm).
 
 Export the following variables to customize the image properties:
 
@@ -54,9 +54,9 @@ Export the following variables to customize the image properties:
 | OS_VERSION   | Required OS versions.      | CentOS: 7.9.2009<br> Ubuntu: 18.04 | 
 | VERTICA_PACKAGE | Name of the .rpm or .deb file | CentOS: vertica-x86_64.RHEL6.latest.rpm<br>Ubuntu: vertica.latest.deb |
 
-> **NOTE**: The defaults might not be suitable for your site, you may want to edit the `Makefile` to use more appropriate defaults.
+> **NOTE**: If the defaults are not be suitable for your environment, edit the `Makefile` to use more appropriate defaults.
 
-If you do not specify VERTICA_PACKAGE, and TAG is not 'latest', then the TAG must be the Vertica version because it is used to construct the version portion of the VERTICA_PACKAGE name.
+If you do not specify VERTICA_PACKAGE, and TAG is not set to `latest`, then the TAG must be the Vertica version because it is used to construct the version portion of the VERTICA_PACKAGE name.
 
 ### Examples:
 ```shell
@@ -93,7 +93,9 @@ After `Dockerfile_<distro>` installs the RPM or DEB file, it runs `tools/cleanup
 
 # Testing with ./run_tests.sh
 
-After you build the container, you can test it using the `./run_tests.sh` script (or by running `make test`). The `./run_tests.sh` script verifies that the container can execute Vertica and some of the additional libraries. This script requires a [local copy of the vsql client](#getting-a-local-copy-of-vsql). 
+After you build the container, you can test it with `make test` or with the `./run_tests.sh` script. The `./run_tests.sh` script verifies that the container can execute Vertica and some of the additional libraries.
+
+> **IMPORTANT**: `./run_tests.sh` requires a [local copy of the vsql client](#getting-a-local-copy-of-vsql). 
 
 The `./run_tests.sh` script uses the normal Vertica port number, so you must stop any existing Vertica server (container or otherwise) on your test system before you test your container.
 
@@ -120,7 +122,7 @@ In the previous command, `<suffix>` refers to the numeric suffix (the PID of the
 
 ## Start the Vertica server instance
 
-Vertica provides the `start-vertica.sh` script with the following options:
+This repository contains the `start-vertica.sh` script with the following options:
 
 ```shell
 Usage: ./start-vertica.sh [-c cname] [-d cid_dir] [-h] [-i img_name] [-t tag] [-v hostpath:containerdir] -V docker-volume
@@ -148,7 +150,7 @@ start-vertica.sh -d /home
 
 ## Start with `docker run`
 
-You can also use `docker run`. In the following example, `vertica-ce:latest` is the container image you created in [Building the image](#building-the-image):
+You can also use `docker run` to start the server instance. In the following example, `vertica-ce:latest` is the container image you created in [Building the image](#building-the-image):
 
 ```shell
 docker run -p 5433:5433 \
@@ -185,7 +187,7 @@ If you used the `start-vertica.sh` script to [start the server instance](#start-
 ./run-shell-in-container.sh [-d directory-for-cid.txt] [-n container-name] [-u uid] [-h ] [ ? ]
 ```
 
-You must specify either `-d directory-for-cid.txt` or `-n container-name` (e.g., `-n vertica_ce`).
+You must specify either `-d directory-for-cid.txt` or `-n container-name`. For example, `-n vertica_ce`.
 
 `-u uid` specifies what user runs inside the container. Vertica recommends that you use DBADMIN_ID (default 1000), because that user has proper access to Vertica directories inside the container.
 
@@ -207,7 +209,7 @@ docker exec -it <container_name> /opt/vertica/bin/vsql
 
 ## Viewing container logs
 
-Retrieve the container logs with the `docker logs` command. The following command uses **cid.txt**:
+Fetch the container logs with the `docker logs` command. The following command uses **cid.txt**:
 
 ```shell
 docker logs `cat cid.txt`
@@ -232,7 +234,7 @@ docker logs vertica_ce
 
 # External database access
 
-The container exposes port 5433 for external client access. To access the database from outside the container, you must have a local copy of vsql.
+The container exposes port 5433 for external client access. To access the database from outside the container, you must have a [local copy of the vsql client](#getting-a-local-copy-of-vsql).
 
 ## Getting a local copy of vsql
 
