@@ -1,10 +1,11 @@
 
 # About
 
-This is a single-node Docker [Community Edition](https://www.vertica.com/docs/latest/HTML/Content/Authoring/GettingStartedGuide/DownloadingAndStartingVM/DownloadingAndStartingVM.htm) image for Vertica. The base OS for the image is CentOS7.9.2009 with a Vertica Version 11.0.1 CE.
+This is a single-node Docker [Community Edition](https://www.vertica.com/docs/latest/HTML/Content/Authoring/GettingStartedGuide/DownloadingAndStartingVM/DownloadingAndStartingVM.htm) image for Vertica. The base OS for the image is CentOS7.9.2009 with a Vertica Version 11.1.0-0 CE.
 
 # Supported Tags
 * 11.1.0-0, latest
+* 11.0.2-0
 * 11.0.1-0
 * 11.0.0-0
 * 10.1.1-0
