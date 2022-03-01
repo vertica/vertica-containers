@@ -1,28 +1,25 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg)](https://opensource.org/licenses/Apache-2.0)
 
-# Vertica containers
+# Vertica Containers
 
-This repository has the sources for some container-based projects using Vertica
-(other than the containers used in
-[vertica-kubernetes](https://github.com/vertica/vertica-kubernetes),
-which has its own repository).
+This repository has the sources for container-based projects using Vertica.
 
-These containers are incomplete in themselves: at the moment (November
-2021) they require a licensed Vertica RPM or .deb file to build.
+For Vertica on Kubernetes containers and resources, see [vertica-kubernetes](https://github.com/vertica/vertica-kubernetes).
 
-## [One-Node "CE"](https://github.com/vertica/vertica-containers/tree/main/one-node-ce)
+> **IMPORTANT**: To build the projects in this repository, you must have a licensed Vertica RPM or DEB file.
 
-This directory gives the instructions for building the containerized
-version of our Community Edition
-virtual-machine-based [Community Edition (CE)](https://www.vertica.com/landing-page/start-your-free-trial-today/).
+## [One-Node CE](https://github.com/vertica/vertica-containers/tree/main/one-node-ce)
 
-As noted above, to build and install this container you need a Vertica RPM (or Vertica
-.deb file).  However, do not despair!  We also publish a binary version of this
-container, see our [Vertica Dockerhub vertica-ce download](https://hub.docker.com/r/vertica/vertica-ce).
+The One-Node CE directory provides instructions to build the containerized version of the [Vertica Community Edition (CE)](https://www.vertica.com/landing-page/start-your-free-trial-today/), a free, limited license that Vertica provides users as a hands-on introduction to the platform. For an overview, see the [Vertica documentation](https://www.vertica.com/docs/latest/HTML/Content/Authoring/GettingStartedGuide/DownloadingAndStartingVM/DownloadingAndStartingVM.htm).
+
+Vertica publishes the binary version of this container on [DockerHub](https://hub.docker.com/u/vertica) as the [vertica/vertica-ce](https://hub.docker.com/r/vertica/vertica-ce) container.
+
 
 ## [UDx-container](https://github.com/vertica/vertica-containers/tree/main/UDx-container)
 
-This container packages the pieces needed to build User-Defined
-eXtensions --- C++-compiler, libraries, the appropriate version of the Google protobuf compiler,
-Python interpreter, and tools to invoke them.  As noted above, to build and install this container you need a copy of the Vertica RPM (or Vertica .deb file) used at your site for your Vertica installation.
-
+The UDx-container directory packages in a container the following resources required to build User-Defined eXtensions:
+- C++-compiler
+- Libraries
+- Google protobuf compiler
+- Python interpreter
+- Tools to invoke the UDx
