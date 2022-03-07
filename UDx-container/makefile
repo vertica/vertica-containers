@@ -68,6 +68,10 @@ else
 $(error "TARGET not set to 'rpm' or 'deb'")
 endif
 
+ifeq ($(PACKAGE), )
+$(error "Cannot find the vertica install package in current working directory")
+endif
+
 # The user hasn't handed us a VERTICA_VERSION
 ifeq ($(origin VERTICA_VERSION), undefined)
 	version := $(shell python3 ./vertica_version_from_package.py -v $(PACKAGE))
@@ -98,7 +102,7 @@ else
 endif
 
 .PHONY: display
-display: 
+display: $(PACKAGE) 
 	$(info Variable settings:)
 	$(info PACKAGE: $(PACKAGE))
 	$(info CONTAINER OS: $(CONTAINER_OS))
@@ -108,7 +112,7 @@ display:
 
 .PHONY: rpm_build
 # Defining ${SUFFIX} makes it easier to try variations on the Dockerfile_RPM
-rpm_build: display Dockerfile_RPM${SUFFIX}
+rpm_build: $(PACKAGE) display Dockerfile_RPM${SUFFIX}
 	$(info VERTICA_RPM: $(PACKAGE))
 	$(info CONTAINER_OS_VERSION: $(CONTAINER_OS_VERSION))
 	docker build \
@@ -128,7 +132,7 @@ deb-file-extract-list: $(PACKAGE) file-patterns make-deb-file-extract-list
 
 .PHONY: deb_build
 # Defining ${SUFFIX} makes it easier to try variations on the Dockerfile_DEB
-deb_build: display deb-file-extract-list Dockerfile_DEB${SUFFIX}
+deb_build: $(PACKAGE) display deb-file-extract-list Dockerfile_DEB${SUFFIX}
 	$(info VERTICA_DEB: $(PACKAGE))
 	$(info CONTAINER_OS_VERSION: $(CONTAINER_OS_VERSION))
 	docker build \
