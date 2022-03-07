@@ -50,7 +50,7 @@ PROG=`basename $0`
 
 # The user can override the OS selection by defining OSTAG in the
 # environment (mostly for testing)
-. /etc/os-release
+[[ -r /etc/os-release ]] && . /etc/os-release
 
 # Why so elaborate?  Mostly to handle various potential error
 # conditions, plus simplify symlinks.
@@ -79,10 +79,8 @@ DVOL=verticasdk-data
 SCRIPT_DIR="$( cd `dirname "${BASH_SOURCE[0]}"` &> /dev/null && pwd )"
 . ${SCRIPT_DIR}/set_container_path
 
-INTERACTIVE=
 case $PROG in
     vsdk-bash)
-        INTERACTIVE=-it
         CMD=${BINDIR}/bash
         ;;
     vsdk-cp)
@@ -107,14 +105,12 @@ case $PROG in
 esac
 
 VSDK_VOLUMES=""
-if [ "$VSDK_MOUNT"x != x ]; then
-    for dir in $VSDK_MOUNT; do
-        VSDK_VOLUMES="$VSDK_VOLUMES -v $dir:$dir"
-    done
-fi
+for dir in $VSDK_MOUNT; do
+    VSDK_VOLUMES+=" -v $dir:$dir"
+done
 
 VSDK_ENV_FILE_OPTION=""
-if [ "$VSDK_ENV"x != x ]; then
+if [[ -n $VSDK_ENV ]]; then
     VSDK_ENV_FILE_OPTION="--env-file $VSDK_ENV"
 fi
 
@@ -133,15 +129,15 @@ for arg in "$@"; do
     COMMAND="$COMMAND \"$arg\""
 done
 
-docker run \
-       $INTERACTIVE \
-       -e PATH=$CONTAINER_PATH \
-       -e vUID=$user_id \
-       -e vUSER=$USER \
-       -u $user_id \
+docker run -it \
+       -e "PATH=$CONTAINER_PATH" \
+       -e "vUID=$user_id" \
+       -e "vUSER=$USER" \
+       -u 1000 \
        -v "$HOME:$HOME:rw" \
-       -v $CURDIR:$CURDIR:rw \
-       --mount type=volume,source=$DVOL,target=/data \
+       -v "$CURDIR:$CURDIR:rw" \
+       -w "$CURDIR" \
+       --mount "type=volume,source=$DVOL,target=/data" \
        $VSDK_VOLUMES \
        $VSDK_ENV_FILE_OPTION \
        $CONTAINER_TAG \
