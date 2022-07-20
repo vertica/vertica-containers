@@ -75,7 +75,7 @@ display:
 
 .PHONY: deb_build
 # Defining ${SUFFIX} makes it easier to try variations on the Dockerfile
-deb_build: display Dockerfile${SUFFIX} get-wasmer get-rustup
+deb_build: display Dockerfile${SUFFIX}
 	$(info CONTAINER_OS_VERSION: $(CONTAINER_OS_VERSION))
 	docker build \
 		-f Dockerfile${SUFFIX} \
