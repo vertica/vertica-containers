@@ -17,7 +17,7 @@ docker run vertica/kafka-scheduler vkconfig target --help
 docker run vertica/kafka-scheduler vkconfig load-spec --help
 docker run vertica/kafka-scheduler vkconfig microbatch--help
 # using a conf file
-docker run -it -v $PWD/vkconfig.conf:/tmp/vkconfig.conf vertica/kafka-scheduler vkconfig scheduler --conf /tmp/vkconfig.conf ...
+docker run -it -v $PWD/vkconfig.conf:/etc/vkconfig.conf vertica/kafka-scheduler vkconfig scheduler --conf /etc/vkconfig.conf ...
 ```
 
 ## Example
