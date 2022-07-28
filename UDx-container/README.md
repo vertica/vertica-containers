@@ -42,7 +42,7 @@ Of special note is the `vsdk-vertica` command which launches a container with a 
 
 # Building the UDx container
 
-Use the repository `makefile` to build your container. The makefile requires that you store a Vertica RPM or DEB file in the top-level directory of your cloned repository. The container inherits the privileges and user ID from the user executing the container.
+Use the repository `makefile` to build your container. The makefile requires that you store a Vertica RPM or DEB file in the top level of the UDx-container directory of your cloned repository. The container inherits the privileges and user ID from the user executing the container.
 
 ## Build variables
 
