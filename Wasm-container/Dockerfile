@@ -84,11 +84,11 @@ RUN sh -c 'curl https://get.wasmer.io -sSfL | sh'
 
 WORKDIR /usr/WebAssembly/rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
-    && $HOME/.cargo/bin/rustup +stable update \
-    && $HOME/.cargo/bin/rustup +stable target add wasm32-unknown-unknown --toolchain stable \
-    && $HOME/.cargo/bin/rustup +stable target add wasm32-wasi --toolchain stable \
-    && $HOME/.cargo/bin/rustup +stable target add x86_64-unknown-linux-gnu --toolchain stable \
-    && $HOME/.cargo/bin/rustup +stable install stable 
+    && $HOME/.cargo/bin/rustup toolchain install stable \
+    && $HOME/.cargo/bin/rustup update \
+    && $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain stable \
+    && $HOME/.cargo/bin/rustup target add wasm32-wasi --toolchain stable \
+    && $HOME/.cargo/bin/rustup target add x86_64-unknown-linux-gnu --toolchain stable
 
 RUN pip3 install wasmer wasmer_compiler_cranelift wasmer_compiler_singlepass wasmer_compiler_llvm
 
