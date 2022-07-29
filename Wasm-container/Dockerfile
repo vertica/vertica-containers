@@ -56,6 +56,7 @@ RUN set -x \
             lsb-release \
             make \
             nasm \
+            ninja-build \
             procps \
             python3 \
             python3-pip \
@@ -63,8 +64,10 @@ RUN set -x \
             sudo \
             tar \
             vim \
+            wabt \
             wget \
- && chsh -s /bin/bash root 
+ && chsh -s /bin/bash root
+ 
 
 # instructions for Ubuntu from https://apt.llvm.org/
 WORKDIR /usr/WebAssembly/llvm
@@ -80,17 +83,24 @@ WORKDIR /usr/WebAssembly/wasmer
 RUN sh -c 'curl https://get.wasmer.io -sSfL | sh'
 
 WORKDIR /usr/WebAssembly/rust
-RUN curl https://sh.rustup.rs -sSf -o get-rustup \
-    && sh ./get-rustup -y \
-    && $HOME/.cargo/bin/rustup update \
-    && $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain stable \
-    && $HOME/.cargo/bin/rustup target add wasm32-wasi --toolchain stable \
-    && $HOME/.cargo/bin/rustup install stable 
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
+    && $HOME/.cargo/bin/rustup +stable update \
+    && $HOME/.cargo/bin/rustup +stable target add wasm32-unknown-unknown --toolchain stable \
+    && $HOME/.cargo/bin/rustup +stable target add wasm32-wasi --toolchain stable \
+    && $HOME/.cargo/bin/rustup +stable target add x86_64-unknown-linux-gnu --toolchain stable \
+    && $HOME/.cargo/bin/rustup +stable install stable 
 
-RUN mkdir /usr/WebAssembly/template \
+RUN pip3 install wasmer wasmer_compiler_cranelift wasmer_compiler_singlepass wasmer_compiler_llvm
+
+RUN mkdir /usr/WebAssembly/template /usr/WebAssembly/template/tools \
     && cp -r $HOME/.cargo /usr/WebAssembly/template \
     && cp -r $HOME/.wasmer /usr/WebAssembly/template \
     && chmod -R a+r,a+X /usr/WebAssembly/template
+
+COPY copy-template-to-sandbox /usr/WebAssembly/template/tools
+COPY wasm-env-setup /usr/WebAssembly/template/tools
+RUN chmod +x /usr/WebAssembly/template/tools/copy-template-to-sandbox
+COPY examples /usr/WebAssembly/examples
 
 # WORKDIR somewhere useful
 # 
