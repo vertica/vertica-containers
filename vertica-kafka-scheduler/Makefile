@@ -21,7 +21,7 @@ build: java kafka ## build the docker image
 .PHONY: push
 push: java kafka ## push the docker image up to docker hub
 	docker context create mycontext; \
-	docker buildx create mycontext -name mybuilder; \
+	docker buildx create mycontext --name mybuilder; \
 	docker buildx inspect --bootstrap; \
 	docker buildx build --platform=linux/arm64,linux/amd64 -t "vertica/kafka-scheduler:$(VERTICA_VERSION)" . --push
 
