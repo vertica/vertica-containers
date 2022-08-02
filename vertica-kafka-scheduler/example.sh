@@ -200,6 +200,7 @@ done
 break
 done
 
+docker-compose exec vertica vsql -c "select KafkaOffsets();" | $green
 docker-compose exec vertica vsql -c "select * from KafkaFlex_view" | $green
 if (( $(docker-compose exec vertica vsql -t -c "select count(*) from KafkaFlex_rej" | head -1 | sed 's/\s//g') )); then
   docker-compose exec vertica vsql -c "select * from KafkaFlex_rej" | $red
