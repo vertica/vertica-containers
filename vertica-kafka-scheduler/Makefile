@@ -2,6 +2,7 @@
 
 VERTICA_INSTALL?=/opt/vertica
 VERTICA_VERSION?=latest
+TAGS=$(patsubst %,-t vertica/kafka-scheduler:%,$(VERTICA_VERSION))
 VERSION?=latest
 SHELL:=/bin/bash
 
@@ -20,10 +21,12 @@ build: java kafka ## build the docker image
 
 .PHONY: push
 push: java kafka ## push the docker image up to docker hub
-	docker context create mycontext; \
-	docker buildx create mycontext --name mybuilder; \
-	docker buildx inspect --bootstrap; \
-	docker buildx build --platform=linux/arm64,linux/amd64 -t "vertica/kafka-scheduler:$(VERTICA_VERSION)" . --push
+	#docker context create mycontext
+	docker buildx rm vkconfig_builder >/dev/null 2>&1 || true
+	docker buildx create --use --driver docker-container --name vkconfig_builder
+	docker buildx inspect --bootstrap
+	docker buildx build --platform=linux/arm64,linux/amd64 $(TAGS) . --push
+	docker buildx rm vkconfig_builder >/dev/null 2>&1 || true
 
 .PHONY: test
 test: ## suite of tests to make sure everything is working
