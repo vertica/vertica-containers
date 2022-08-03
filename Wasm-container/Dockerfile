@@ -22,6 +22,9 @@ FROM ubuntu:${os_version} as builder
 ENV DEBIAN_FRONTEND noninteractive
 ENV TERM 1
 
+ENV TEMPLATE /usr/WebAssembly/template
+ENV TOOLDIR ${TEMPLATE}/tools
+
 # required for Ubuntu because some of the Rust and Wasm tool installers
 # use bash syntax instead of the syntax used by the default shell
 ENV SHELL "/bin/bash"
@@ -86,13 +89,14 @@ WORKDIR /usr/WebAssembly/wasmer
 RUN sh -c 'curl https://get.wasmer.io -sSfL | sh'
 
 # This is the result of a Rust newbie feeling their way to a proper installation 
+RUN mkdir ${TEMPLATE} ${TOOLDIR} 
+    
+
 WORKDIR /usr/WebAssembly/rust
+COPY reinstall-rust ${TOOLDIR}/reinstall-rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
-    && $HOME/.cargo/bin/rustup toolchain install stable \
-    && $HOME/.cargo/bin/rustup update \
-    && $HOME/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain stable \
-    && $HOME/.cargo/bin/rustup target add wasm32-wasi --toolchain stable \
-    && $HOME/.cargo/bin/rustup target add x86_64-unknown-linux-gnu --toolchain stable
+    && chmod +x ${TOOLDIR}/reinstall-rust \
+    && ${TOOLDIR}/reinstall-rust $HOME 
 
 # I haven't gotten the python wasmer tools to work yet
 # RUN pip3 install wasmer wasmer_compiler_cranelift wasmer_compiler_singlepass wasmer_compiler_llvm
@@ -103,15 +107,14 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
 # directory.
 # (Probably could bypass the `cp -r` by defining the HOME envar to be
 # /usr/WebAssembly/template at the start of the Dockerfile.)
-RUN mkdir /usr/WebAssembly/template /usr/WebAssembly/template/tools \
-    && cp -r $HOME/.cargo /usr/WebAssembly/template \
-    && cp -r $HOME/.wasmer /usr/WebAssembly/template \
-    && chmod -R a+r,a+X /usr/WebAssembly/template
+RUN cp -r $HOME/.cargo ${TEMPLATE} \
+    && cp -r $HOME/.wasmer ${TEMPLATE} \
+    && chmod -R a+r,a+X ${TEMPLATE}
 
 # useful scripts for users
-COPY copy-template-to-sandbox /usr/WebAssembly/template/tools
-COPY wasm-env-setup /usr/WebAssembly/template/tools
-RUN chmod +x /usr/WebAssembly/template/tools/copy-template-to-toolbox
+COPY copy-template-to-sandbox ${TOOLDIR}
+COPY wasm-env-setup ${TOOLDIR}
+RUN chmod +x ${TOOLDIR}/copy-template-to-sandbox
 # Example use of the tools
 COPY examples /usr/WebAssembly/vertica
 
