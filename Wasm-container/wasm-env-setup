@@ -16,5 +16,5 @@ else
     source $CARGO_HOME/env
 
     # clang doesn't seem to have a built-in idea where to find wasm-ld
-    export PATH=/usr/lib/llvm-15/bin:$PATH
+    export PATH=/opt/vertica/bin:/usr/lib/llvm-15/bin:$PATH
 fi
