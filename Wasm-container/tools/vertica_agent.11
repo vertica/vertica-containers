@@ -1,0 +1,472 @@
+#!/usr/bin/env bash
+# -*-mode: shell-script-*-
+# vim: et ts=4 sw=4
+
+# Copyright (c) [2021] Micro Focus or one of its affiliates.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#    http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+
+### vertica_agent - start/stop/status/restart/enable/disable for the Vertica Management Agent daemon
+#
+#
+# The vertica agent provides a way to manipulate Vertica Database via admintools.
+#
+# RedHat metadata format:
+# chkconfig: 345 99 10
+# description: Start/stop/status/restart/enable/disable script for Vertica Management Agent
+# 
+# LSB/SUSE format:
+### BEGIN INIT INFO
+# Provides:       vertica_agent
+# Required-Start: $network
+# Should-Start:
+# Required-Stop:
+# Should-Stop:
+# Default-Start:  3 5
+# Default-Stop:   0 1 6
+# Description: Start/stop/status/restart/enable/disable script for Vertica Management Agent 
+### END INIT INFO
+
+
+
+#
+# Determine our OS
+#
+# July 2020: Are you adding another method for detecting another OS?
+#            Please consider removing the "OS dependent" code instead.
+#            It is unclear what functionality is truly OS dependent here.
+#            It would simplify supported platforms work to just remove this.
+#
+
+[ -f /etc/redhat-release ] && OS=redhat
+# SuSE-release is not present in SUSE 15+
+[ -f /etc/SuSE-release ] && OS=suse
+[ -f /etc/debian_version ] && OS=debian
+[ -f /etc/os-release ] && grep -q -e "Amazon Linux" -e "amzn" /etc/os-release && OS="AMAZON_LINUX"
+[ -f /etc/os-release ] && grep -q -i -e "suse" /etc/os-release && OS="suse"
+
+#
+# Source function library.
+#
+case $OS in
+    redhat|AMAZON_LINUX)
+        . /etc/rc.d/init.d/functions
+        ;;
+    suse)
+        . /etc/rc.status
+        ;;
+    debian)
+        . /lib/lsb/init-functions
+        ;;
+    *)
+        echo Unsupported OS
+        exit 1
+        ;;
+esac
+
+#
+#
+# Checking agent enable options of /opt/vertica/config/agent.conf
+#
+#
+
+
+function check_agent_enabled {
+
+    # Set option file name, and option key name
+    FILE=/opt/vertica/config/agent.conf
+    KEYNAME=use_agent
+
+    # Check file. Use agent anyway if file doesn't exist
+    if [  -f "$FILE" ]
+    then
+        # Check if the config file has a [default] section, if not, add it at the beginning
+        defaultsection=`grep -e '\[default\]' $FILE`
+        if [ "$defaultsection" = '' ]
+        then
+            sed -i '1i[default]\' $FILE
+        fi
+        # get "$KEYNAME" line
+        agentline=`grep -e $KEYNAME $FILE`
+        echo $agentline
+        # if agentline empty use agent anyway, otherwise check option
+        if [ ! "$agentline" = '' ]
+        then
+            # get option
+            option=`echo $agentline | sed "s/$KEYNAME[= ]*//"`
+            echo $option
+            # convert option to lower case
+            option=`echo $option | tr '[:upper:]' '[:lower:]'`
+
+            # check option
+            # $KEYNAME=true/false.
+
+            if [ ! $option == 'true' ]
+            then
+                echo 'vertica_agent: the use agent option is NOT TRUE, please see /opt/vertica/config/agent.conf'
+                exit 0
+            fi
+
+        fi
+
+    else # create this file
+        echo "[default]" >> $FILE
+        echo "$KEYNAME=true" >> $FILE
+    fi
+
+}
+
+
+
+#
+#
+# Enable the agent
+#
+
+
+function enable_agent {
+    # Set option file name, and option key name
+    FILE=/opt/vertica/config/agent.conf
+    KEYNAME=use_agent
+
+    if [ -f "$FILE"  ]
+    then # if file exists
+        agentline=`grep -e $KEYNAME $FILE`
+
+        if [ "$agentline" = '' ]
+        then
+            echo "$KEYNAME=true" >> $FILE # if no such line add this line
+        else
+            sed -i "s/$agentline/$KEYNAME=true/g" $FILE  # substitute the $agentline
+        fi
+    else # create this file
+        echo "$KEYNAME=true" >> $FILE
+    fi
+    success
+
+}
+
+
+
+
+#
+#
+# Disable the agent
+#
+
+
+function disable_agent {
+    # Set option file name, and option key name
+    FILE=/opt/vertica/config/agent.conf
+    KEYNAME=use_agent
+
+    if [ -f "$FILE"  ]
+    then # if file exists
+        agentline=`grep -e $KEYNAME $FILE`
+
+        if [ "$agentline" = '' ]
+        then
+            echo "$KEYNAME=false" >> $FILE # if no such line add this line
+        else
+            sed -i "s/$agentline/$KEYNAME=false/g" $FILE  # substitute the $agentline
+        fi
+    else # create this file
+        echo "$KEYNAME=false" >> $FILE
+    fi
+
+    success
+
+}
+
+
+function enable_tls {
+    # Set option file name, and option key name
+    FILE=/opt/vertica/config/agent.conf
+    KEYNAME=mutual_tls
+
+    if [ -f "$FILE"  ]
+    then # if file exists
+        agentline=`grep -e $KEYNAME $FILE`
+
+        if [ "$agentline" = '' ]
+        then
+            echo "$KEYNAME=true" >> $FILE # if no such line add this line
+        else
+            sed -i "s/$agentline/$KEYNAME=true/g" $FILE  # substitute the $agentline
+        fi
+    else # create this file
+        echo "$KEYNAME=true" >> $FILE
+    fi
+    echo "restart of the vertica agent is required to apply this change."
+    success
+
+}
+
+function disable_tls {
+        # Set option file name, and option key name
+    FILE=/opt/vertica/config/agent.conf
+    KEYNAME=mutual_tls
+
+    if [ -f "$FILE"  ]
+    then # if file exists
+        agentline=`grep -e $KEYNAME $FILE`
+
+        if [ "$agentline" = '' ]
+        then
+            echo "$KEYNAME=false" >> $FILE # if no such line add this line
+        else
+            sed -i "s/$agentline/$KEYNAME=false/g" $FILE  # substitute the $agentline
+        fi
+    else # create this file
+        echo "$KEYNAME=false" >> $FILE
+    fi
+    echo "restart of the vertica agent is required to apply this change."
+    success
+
+}
+
+
+#
+# OS-specific helper functions
+#
+# error(msg) prints the error message then exits
+#
+function error {
+    if [ "$mode" == "status" ]; then
+        echo $1
+    else
+        echo $1
+        case $OS in
+            redhat|AMAZON_LINUX)
+                echo_failure
+                ;;
+            suse)
+                echo $rc_failed
+                ;;
+            debian)
+                log_failure_msg
+                ;;
+        esac
+    fi
+    exit 1
+}
+
+# success() exits appropriately
+#
+function success {
+    if [ "$mode" == "status" ]; then
+        echo $1
+    else
+        echo $1
+        case $OS in
+            redhat|AMAZON_LINUX)
+                echo_success
+                ;;
+            suse)
+                echo -e "$rc_running"
+                ;;
+            debian)
+                log_success_msg
+                ;;
+        esac
+    fi
+    exit 0
+}
+
+
+stop() {
+    echo -n $"Stopping vertica agent: "
+
+    if [ -f /opt/vertica/log/agent.pid ]; then
+        PID=`cat /opt/vertica/log/agent.pid`
+        if [ "$PID" != "" ]; then
+           kill -9 -$PID 
+           RETVAL=$?
+        fi
+        rm /opt/vertica/log/agent.pid
+    fi
+
+    ps -eo comm,pid | grep agent.sh >/dev/null 2>&1
+    # check vertica agent proc existence
+    if [ $? -eq 0 ];then
+        echo "vertica agent is already running, stopping..."
+        PID=`ps -eo comm,pid | grep agent.sh | sed -r 's/[^0-9]*//'`
+        # if there are multiple agent.sh running, kill each of them and their children
+        for GID in $PID
+        do
+            kill -9 -$GID
+        done
+        rm -f /opt/vertica/log/agent.pid
+    fi
+
+    echo
+}
+
+
+
+start(){
+# Ready to roll...
+#
+# Sanity checks: networking must be up, 
+# vertica must be installed and no agent instance is running. 
+#
+
+
+if [ "$OS" == "redhat" -o "$OS" == "AMAZON_LINUX" ]; then
+    . /etc/sysconfig/network
+    if [ "${NETWORKING}" = "no" ]; then
+        error
+    fi
+fi
+
+# check whether vertica agent is already running. If so, kill it and restart.
+ps -eo comm,pid | grep agent.sh >/dev/null 2>&1
+# check vertica agent proc existence
+if [ $? -eq 0 ];then
+    echo "vertica agent is already running, stopping..."
+    PID=`ps -eo comm,pid | grep agent.sh | sed -r 's/[^0-9]*//'`
+    # if there are multiple agent.sh running, kill each of them and their children
+    for GID in $PID
+    do
+        kill -9 -$GID
+    done
+    rm -f /opt/vertica/log/agent.pid
+fi
+
+
+
+
+# We use the parent directory of this script as the vertica path prefix.
+script_dir="$( readlink -f $( dirname "${BASH_SOURCE[0]}" ) )"
+vertica_prefix=$(dirname "$script_dir")
+
+atconf="${vertica_prefix}/config/admintools.conf"
+if [ ! -f "$atconf" ]; then
+    error "Vertica not yet installed. Run ${vertica_prefix}/sbin/install_vertica"
+fi
+
+agent_user=$(/usr/bin/stat --format "%U" "${atconf}")
+rc="$?"
+
+if [ "$rc" != 0 -o -z "$agent_user" ]; then
+    error "No owner determined for admintools.conf"
+fi
+
+# output goes to /dev/null for this script, but most stuff is in admin tools log
+
+echo "starting agent"
+cd "${vertica_prefix}/agent"
+# Note: previously we ran daemonize as root. Now we run as user.  Need
+# to change ownership of files.  Ignore failures (that's the 'or' part)
+chown "${agent_user}:" "${vertica_prefix}/log/agent.pid" 2>/dev/null || [ 1 ]
+chown "${agent_user}:" "${vertica_prefix}/log/agent_${agent_user}.log" 2>/dev/null || [ 1 ]
+chown "${agent_user}:" "${vertica_prefix}/log/agent_${agent_user}.err" 2>/dev/null || [ 1 ]
+# su --login to $agent_user in order to go through environment setup.
+# As that user, daemonize the process.  Causes su to return immediately.
+
+which runuser 1>/dev/null 2>&1
+if [ $? -eq 0 ]; then
+    runuser ${agent_user} --command "${vertica_prefix}/sbin/daemonize -p ${vertica_prefix}/log/agent.pid -o ${vertica_prefix}/log/agent_${agent_user}.log -e ${vertica_prefix}/log/agent_${agent_user}.err -v ${vertica_prefix}/agent/agent.sh"
+    RETVAL=$?
+else
+    # ubuntu 14 does not have runuser
+    su ${agent_user} --login --command "${vertica_prefix}/sbin/daemonize -p ${vertica_prefix}/log/agent.pid -o ${vertica_prefix}/log/agent_${agent_user}.log -e ${vertica_prefix}/log/agent_${agent_user}.err -v ${vertica_prefix}/agent/agent.sh"
+    RETVAL=$?
+fi
+
+if [ $RETVAL -eq 0 ] ; then
+     if [ -e /var/lock/subsys ]; then
+          touch "/var/lock/subsys/vertica_agent-${agent_user}"
+     else
+          touch "/var/lock/vertica_agent-${agent_user}"
+     fi
+     if [ $? -eq 0 ] ; then
+          success "start OK for user: ${agent_user}"
+     else
+          error "start not OK"
+     fi
+else
+   error "start not OK"
+fi
+}
+
+# See how we were called.
+case "$1" in
+    start)
+        check_agent_enabled
+        start
+        ;;
+    stop)
+        #check_agent_enabled
+        stop
+        ;;
+    status)
+        check_agent_enabled
+        echo -n $"Vertica Agent: "
+        case "$OS" in
+            suse | debian)
+                RETVAL=0
+                PID=`pidof  -x /opt/vertica/agent/agent.sh;RETVAL=$?`;
+                if [ $RETVAL -ne 0 ]; then
+                    exit 3
+                fi
+
+                if [ "$PID" = "" ]; then
+                    echo "agent is stopped"
+                    exit 3
+                else
+                    echo "(pid "$PID") is running..."
+                fi
+                ;;
+            *)
+                RETVAL=0
+                PID=`status -p /opt/vertica/log/agent.pid /bin/sh;RETVAL=$?;`
+                if [ "$PID" = "sh is stopped" ]; then
+                    echo "agent is stopped"
+                    exit 3
+                else
+                    echo $PID
+                fi
+
+                # Make some suggestions.  0 is running, 3 is normal stop.
+                if [ $RETVAL -ne 0 ] && [ $RETVAL -ne 3 ] ; then
+                    echo "Try using 'vertica_agent stop' to clear state"
+                fi
+                ;;
+        esac
+        ;;
+    restart)
+        check_agent_enabled
+        stop
+        sleep 3
+        start
+        ;;
+    enable_tls)
+        enable_tls
+        ;;
+    disable_tls)
+        disable_tls
+        ;;
+    enable)
+        enable_agent
+        ;;
+    disable)
+        disable_agent
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart|condrestart|enable|disable|enable_tls|disable_tls}"
+        exit 1
+        ;;
+esac
