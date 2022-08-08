@@ -60,7 +60,7 @@ case $OSTAG in
         ALSO_IN_PATH=/usr/bin
         ;;
 esac
-CONTAINER_TAG=${CONTAINER_TAG:-vwasmsdk:$OSTAG-${VERTICA_VERSION:-11.0.0-0}}
+CONTAINER_TAG=${CONTAINER_TAG:-vwasmsdk:$OSTAG-${VERTICA_VERSION:-12.0.1-0}}
 DVOL=vwasmsdk-data 
 
 # must follow the definition of BINDIR
