@@ -59,9 +59,9 @@ SCRIPT_DIR="$( cd `dirname "${BASH_SOURCE[0]}"` &> /dev/null && pwd )"
 . ${SCRIPT_DIR}/set_container_path
 
 IMAGE_NAME=vwasmsdk
-TAG=$OSTAG-${VERTICA_VERSION:-11.0.0-0}
+TAG=$OSTAG-${VERTICA_VERSION:-12.0.1-0}
 
-CONTAINER_TAG=${CONTAINER_TAG:-vwasmsdk:$OSTAG-${VERTICA_VERSION:-11.0.0-0}}
+CONTAINER_TAG=${CONTAINER_TAG:-vwasmsdk:$OSTAG-${VERTICA_VERSION:-12.0.1-0}}
 DVOL=vwasmsdk-data 
 
 CONTAINER_NAME=vwasmsdk-vertica
@@ -152,5 +152,9 @@ echo "Don't stop container until above command prints 'Vertica is now running'"
 echo "To stop:"
 echo "    docker stop $CONTAINER_NAME"
 echo
-echo "To connect with vsql, use"
+echo "When executing outside of a VWasm container, you can connect to this vertica"
+echo "using"
 echo "    vsql -p $(( PORTOFFSET + 5433 ))"
+echo
+echo "If executing inside a VWasm container (where you did your Wasm development),"
+echo "just 'vsql' should suffice"
