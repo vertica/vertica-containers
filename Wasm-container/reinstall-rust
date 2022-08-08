@@ -1,0 +1,33 @@
+#!/usr/bin/bash
+
+# The primary role of the container is to provide a plce to install
+# those components that require privileges to install.
+#
+# Rust and wasmer are designed to be installed privately, in one's
+# home directory.
+#
+# While we play games in the Dockerfile with installing those tools in
+# /usr/WebAssembly/template, and provide a script to copy them into
+# one's home directory, the changes don't always seem to stick between
+# container invocations (this manifests for me as:
+#
+#    error: toolchain 'stable-x86_64-unknown-linux-gnu' is not installed
+#
+# when I try to use rustc to compile a rust file to wasm.
+#
+# So, this script is available to "update" your rust installation (as
+# well as being used by the Dockerfile).
+
+case $# in
+    1) WORKDIR=$1
+       ;;
+    *) echo $0: usage: $0 value for HOME directory.
+       exit 1
+       ;;
+esac          
+
+$WORKDIR/.cargo/bin/rustup toolchain install stable 
+$WORKDIR/.cargo/bin/rustup update 
+$WORKDIR/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain stable 
+$WORKDIR/.cargo/bin/rustup target add wasm32-wasi --toolchain stable 
+$WORKDIR/.cargo/bin/rustup target add x86_64-unknown-linux-gnu --toolchain stable
