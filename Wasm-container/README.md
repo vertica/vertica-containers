@@ -4,11 +4,28 @@
 
 [Vertica](https://www.vertica.com/) is a massively scalable analytics data warehouse that stores your data and performs analytics on it all in one place.
 
-This repository creates an image that provides tools to experiment with developing User-Defined Extensions (UDxs) for Vertica using WebAssembly.
+This repository creates an image that makes it reasonably easy to experiment with developing User-Defined Extensions (UDxes) for Vertica using WebAssembly.
 
-For additional details about developing Vertica UDxs, see [Extending Vertica](https://www.vertica.com/docs/latest/HTML/Content/Authoring/ExtendingVertica/ExtendingVertica.htm).
+Vertica has long supported UDxes in a number of languages:
 
-Note that this container just packages WebAssembly tools for generating .wasm files in C, C++, and Rust.  To do actual UDx development requires a Vertica SDK (which is packaged with your Vertica version).  It is admittedly a little clumsy to hop into this container to compile to Wasm, then move to another environment to link the Wasm into an actual UDx, but this is (at the moment), just a minimal proof-of-concept.
+- C++
+- Java
+- Python
+- R
+
+Java, Python and R UDxes are loaded into auxiliary programs implementing the appropriate runtime.  C++ UDxes may be loaded into a separate program (known as "fenced"), or may be linked directly into the Vertica binary (known as "unfenced").  (All Java, Python, and R UDxes are fenced.)
+
+Unfenced UDxes have a performance advantage over fenced since functions are implemented as function calls instead of as remote procedure calls.  There is a corresponding savings in the cost of data movement (data are pushed onto or popped off of the stack instead of transmitted through a socket).  However, Unfenced UDxes are a little risky: a bug in an unfenced UDx risks crashing the Vertica server.
+
+Safe programming in C++ can be a challenge.
+
+Enter Web Assembly (Wasm).  Wasm code runs in a sandbox with clearly-defined interaction between the Wasm and the host program.  Wasm code accesses memory in its sandbox, and cannot access memory outside its sandbox.  
+
+Supporting Web Assembly IDxes lets us support unfenced UDxes in any language that can compile to Wasm, confident that the user-defined code cannot corrupt Vertica's data structures.
+
+For details about developing Vertica UDxes, see [Extending Vertica](https://www.vertica.com/docs/latest/HTML/Content/Authoring/ExtendingVertica/ExtendingVertica.htm).
+
+This container just packages WebAssembly tools for generating .wasm files in C and Rust, though we anticipate adding other languages (particularly Golang).
 
 ## Prerequisites
 - [Docker Desktop](https://www.docker.com/get-started) or [Docker Engine](https://docs.docker.com/engine/install/).
@@ -22,6 +39,8 @@ We use an Ubuntu container primarily because we found it easier to install the W
 
 This container packages:
 
+- the Vertica SDK for developing UDxes
+- a Vertica runtime to use to test your UDx
 - `llvm` --- the `llvm` compiler components capable of creating WebAssembly output 
 - `emscripten` --- a compiler package for compiling to WebAssembly
 - `wasmer` --- WebAssembly tools
@@ -35,49 +54,43 @@ The container is built using the command `make`.  `make` will create a Docker im
 
 # Using the container
 
-## Setting up the container environment
+## Setting up your Web Assembly toolbox
 
-## Setting up the environment to use Wasm tools inside the container
-
-When executing a shell inside the container, you need to set things up to find the `wasmer` and `rust` installations in the container.
-
-`wasmer` and rust installations are designed to be placed in a user's home directory.  This Dockerfile places them in a directory called `/usr/WebAssembly/template/.cargo` (Rust) and `/usr/WebAssembly/template/.wasmer` (`wasmer`).
-
-To use this installation, before you the container interactively, use it to run the shell script `/usr/WebAssembly/tools/copy-template-to-sandbox` with an argument specifying the location of your WebAssembly toolbox (refered to as `$WASMHOME` above), .e.g.,
+To use this installation, before you run the container interactively, use it to run the shell script `/usr/WebAssembly/tools/copy-template-to-sandbox` with an argument specifying the location of your WebAssembly toolbox (refered to as `$WASMHOME` above), .e.g.,
 
 ```shell
 # Define $WASMHOME for this inside-the-container shell
 user_id=`id -u`
-WASMHOME=$HOME/WebAssembly
+export WASMHOME=$HOME/WebAssembly
 mkdir $WASMHOME
 docker run \
         -e HOME \
         -u $user_id \
         -v $HOME:$HOME:rw \
-        wasm-playground:ubuntu \
-        `/bin/pwd` \
+        vwasmsdk:ubuntu-12.0.1-0 \
+        $WASMHOME \
         "/usr/WebAssembly/template/tools/copy-template-to-sandbox $WASMHOME"
-
-export WASMHOME
-docker run \
-        -e HOME \
-        -e WASMHOME \
-        -u $user_id \
-        -v $HOME:$HOME:rw \
-        wasm-playground:ubuntu \
-        "/usr/WebAssembly/template/tools/copy-template-to-toolbox"
 ```
 (The arguments to `docker` will be explained in detail in the next section.)
 
-The above puts the `.cargo` and `.wasmer` directories into `$WASMHOME`.  Putting these into `$WASMHOME` avoids interfering with any non-wasm Rust work you might be doing.  It also creates the `$HOME/WebAssembly/.env` file.
+The above puts the `.cargo` and `.wasmer` directories into `$WASMHOME`.  Putting these into `$WASMHOME` instead of your home directory avoids interfering with any non-wasm Rust work you might be doing.  It also creates the `$HOME/WebAssembly/.env-setup` file.
 
-After you have created your `$WASMHOME` toolbox, you can run the container interactively.
+After you have used the above command to create your `$WASMHOME` toolbox, you can run the container interactively.
 
-## Running the container interactively 
+## Launching an interactive shell to do Web Assembly development
 
-### Launching the container
+The shell-script `./vwasm-bash` starts an interactive shell inside the container.  
 
-I start the container interactively using a command like this:
+When executing a shell inside the container, you need to set up your in-container PATH so the shell can find the `wasmer` and `rust` installations in the container.
+
+`wasmer` and rust installations are designed to be placed in a user's home directory.  This `copy-template-to-sandbox` command copied them to `$WASMHOME`.
+
+To set up your environment appropriately, run
+```shell
+source $WASMHOME/.env-setup
+```
+
+`./vwasm-bash` does the following:
 
 ```shell
 user_id=`id -u`
@@ -88,10 +101,10 @@ docker run \
         -v $HOME:$HOME \
         -e HOME \
         -it \
-        wasm-playground:ubuntu
+        vwasmsdk:ubuntu-12.0.1-0 
 ```
 
-The arguments to `docker` are:
+The `docker run` options are:
 
 - `-u $user_id`: By initializeing `user_id` with the output of the `id -u` command, processes inside the container run with your UID so you can edit and modify files in your working directories.
 - `-v $SANDBOX:$SANDBOX`: mounts the host computer's `$SANDBOX` directory inside the container with the name `$SANDBOX` (you must, of course, define `$SANDBOX` first).  This argument is optional (e.g., if your sandbox is in your `$HOME` directory).
@@ -100,15 +113,25 @@ The arguments to `docker` are:
 - `-it`: run an interactive shell inside the container
 - `wasm-playground:ubuntu`: the name of the container image
 
-### Setting up the in-container environment
+### An annoying thing about Rust
 
-In the container interactive shell, create the necessary path, Rust and `wasmer` environment by sourcing `$WASMHOME/.env-setup`:
+The primary role of the container is to provide a place to install
+those components that require privileges to install.
 
-```shell
-# .env-setup requires $WASMHOME to be defined since it defines
-# environment variables that depend on its value
-source $WASMHOME/.env-setup
-```
+Rust and wasmer are designed to be installed privately, in one's
+home directory.
+
+While we play games in the Dockerfile with installing those tools in
+`/usr/WebAssembly/template`, and provide a script to copy them into
+one's home directory, the changes don't always seem to stick between
+container invocations.  This manifests for me as the following:
+
+   error: toolchain 'stable-x86_64-unknown-linux-gnu' is not installed
+
+when I try to use `rustc` to compile a rust file to wasm.
+
+So, there is a `./reinstall-rust` command provided to run inside the
+container to run the rust installation commands  
 
 # An experiment with compiling to Wasm
 
@@ -130,6 +153,10 @@ Make targets are:
 - `abstract_runner`: a test program that loads a `wasm` file containing a function that accepts two 32-bit integers and returns one 32-bit integer.
 
 - `run_abstract_runner`: invokes `abstract_runner` with both the `sum.c.wasm` and `sum.rs.wasm` files, invoking the `sum` function in them.  Prints "happy, happy, joy, joy" if the module returns the sum of the two arguments the program passes in.
+
+## An experiment with creating Wasm UDxes
+
+
 
 
 
