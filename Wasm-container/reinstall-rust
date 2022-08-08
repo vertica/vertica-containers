@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-# The primary role of the container is to provide a plce to install
+# The primary role of the container is to provide a place to install
 # those components that require privileges to install.
 #
 # Rust and wasmer are designed to be installed privately, in one's
