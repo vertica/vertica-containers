@@ -30,7 +30,7 @@ int main(int argc, const char* argv[]) {
     int result;
     int a = 10;
     int b = 34;
-    if(! udx_call_func(a, b, &result, ws, &errormsg)) {
+    if(! udx_call_func_2i_1i(a, b, &result, ws, &errormsg)) {
         fprintf(stderr, "%s: %s\n", progname, errormsg);
         return 1;
     }

@@ -219,7 +219,7 @@ bool udx_setup(const char* filename, void *v_ws, const char* func_name, char** e
 }
 
 // This is a specialized function for wasm functions that take two ints and return an int
-bool udx_call_func(int a, int b, int *result, void* v_ws, char** error) {
+bool udx_call_func_2i_1i(int a, int b, int *result, void* v_ws, char** error) {
     struct wasm_state* ws = (struct wasm_state*) v_ws;
     wasm_val_t args_val[2] = { WASM_I32_VAL(a), WASM_I32_VAL(b) };
     wasm_val_t results_val[1] = { WASM_INIT_VAL };

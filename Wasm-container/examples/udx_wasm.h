@@ -10,10 +10,11 @@ bool udx_setup(const char* filename,
                char **place_to_put_errormsg_ptr);
 void udx_cleanup(void* ws);
 
-bool udx_call_func(const int a,
-                   const int b,
-                   int *place_to_put_result,
-                   void* ws,
-                   char** place_to_put_errormsg_ptr);
+// 2 int args, returns 1 int
+bool udx_call_func_2i_1i(const int a,
+                         const int b,
+                         int *place_to_put_result,
+                         void* ws,
+                         char** place_to_put_errormsg_ptr);
 
 #endif // udx_wasm_h

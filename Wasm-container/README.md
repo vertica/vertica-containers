@@ -156,7 +156,105 @@ Make targets are:
 
 ## An experiment with creating Wasm UDxes
 
+In the `examples/UDx` directory you will find prototype UDxes written
+in C-compiled-to-Wasm and Rust-compiled-to-Wasm.
 
+There is a `Makefile` in that directory with the following `make`
+targets:
+
+- cWasmUDxlib --- A UDx which loads a `sum` function from `sum.c.wasm`
+- rustWasmUDxlib --- A UDx which loads a `sum` function from `sum.rs.wasm`
+- nonWasmUDxlib --- A UDx which does the `sum` calculation directly
+
+These UDxes consist largely of boilerplate.  There are different files
+to make it easy to compare the performance of the three UDx
+implemenations against one another in the same Vertica instance.
+
+### An example Rust UDx
+
+Here is a sample Rust implementation of a simple `sum` function:
+
+```rust
+#[no_mangle]
+pub extern "C" fn sum(a: u32, b: u32) -> u32 {
+    return a + b;
+}
+```
+
+Tthe corresponding C++ boilerplate is in
+`examples/UDx/rustWasmUDx.cpp`.  For an explanation of the
+boilerplate, see [Extending
+Vertica](https://www.vertica.com/docs/latest/HTML/Content/Authoring/ExtendingVertica/ExtendingVertica.htm).
+
+As with other C++ UDxes, one creates a factory class (here called
+`cWasmUDx_sumFactory`) and a function class (here called `cWasmUDx_sum`).  In this case, the factory class exists
+primarily to tell Vertica the function prototype for the
+`cWasmUDx_sum` function --- that it takes two integer arguments
+(`argTypes.addInit()`) and returns an integer `returnType.addInt()`).
+
+Function classes can be complicated, but for our simple function, it
+has three methods:
+
+- `setup`: performed once when Vertica is informed of the function.
+  In this case we call `udx_get_wasm_state()` to get a `wasm_state` to
+  hold information about the Wasm C API, and to attach that state to
+  the Wasm bytecode file with `udx_setup()`.  Note that `udx_setup`
+  binds this `wasm_state` to the "sum" function.
+
+- `destroy`: called to deallocate the `wasm_state` data structures.
+
+- `processBlock`: called once for each row of the table being
+  processed.  In this case, the function reads the arguments (using
+  `argReader.getIntRef`, then calls the function with the two
+  arguments (using `udx_call_func_2i_1i`, since this is a
+  2-int-argument, 1-int-return function, and then uses
+  `resWriter.setInt` to return the result.  `resWriter.next` is used
+  to indicate that we've written all the results for this row, and
+  `argReader.next` is used to read the next row.
+
+### Shortcomings of this implementation
+
+The following are shortcomings of this Proof-of-concept implementation that we plan to
+address in the near future
+
+#### Should generate the C++ boilerplate automatically 
+
+The UDx for using `sum.c.wasm` is the same as for `sum.rs.wasm`, save for:
+- a change in the name of the Wasm file to load
+- the name of the class changes
+- the name of the factory class changes
+
+#### `udx_call_func_2i_1i`
+
+(C++ has mangled names for close to forty years, perhaps we can do
+better?)  If we're generating boilerplate, the `udx_call_func` routine
+can perhaps be inlined instead of a function call, which means we
+don't have to tiptoe around C calling conventions.
+
+#### Absolute path on all nodes needed for `.wasm` files
+
+Vertica is a distributed database that runs on a cluster of machines.
+Copies of the Wasm files need to be at a well-known place in all nodes
+of the cluster.  While Vertica has a mechanism for copying library
+files around, it does not appear to work for non-library files (such
+as `sum.c.wasm`, `sum.rs.wasm`).
+
+So: you need to place your Wasm code on all the nodes with the same
+pathname on each node.  
+
+Worse: you need to compile the absolute pathname of the Wasm code into
+your UDx.  You will see these paths specified by definitions of the
+`SUM_C_WASM` and `SUM_RS_WASM` `make` variables.
+
+(One might work around these pathname shenanigans by using `wasm2wat`
+to "decompile" the Wasm code to a text form, which is then compiled as
+a C-string in the C++ source, then use the `wasmer` C-API to convert
+the WAT to Wasm binary.)
+
+For fixed Vertica installations this is not so terrible, but Vertica
+can be run on the cloud, with nodes being added and dropped
+dynamically.  Vertica has mechanisms to maintain UDx dependencies,
+they just need to be modified to permit their use on Wasm files.
 
 
 

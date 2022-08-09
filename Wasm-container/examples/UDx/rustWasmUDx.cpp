@@ -21,6 +21,7 @@ class rustWasmUDx_sum : public ScalarFunction
         // when compiling
         wasm_file = WASMFILE;
         ws = udx_get_wasm_state();
+        // Which function in the wasm module are we going to use?
         if(! udx_setup(wasm_file, ws, "sum", &error_str)) {
             vt_report_error(0,
                             "Cannot initialize wasm from %s; %s",
@@ -50,9 +51,12 @@ class rustWasmUDx_sum : public ScalarFunction
                 } else {
                     char *error_str;
                     int result = 0;
+                    // retrieve Vertica column data as integers to submit to the sum
+                    // function
                     const int a = static_cast<int>(argReader.getIntRef(0));
                     const int b = static_cast<int>(argReader.getIntRef(1));
-                    if(! udx_call_func(a, b, &result, ws, &error_str)) {
+                    // function takes 2 int args, returns 1 int result
+                    if(! udx_call_func2i_1i(a, b, &result, ws, &error_str)) {
                         vt_report_error(0,
                                         "wasm_function_call to %s failed: %s",
                                         wasm_file,
@@ -83,6 +87,7 @@ class rustWasmUDx_sumFactory : public ScalarFunctionFactory
                               ColumnTypes &argTypes,
                               ColumnTypes &returnType)
     {
+        // function takes 2 int args, returns 1 int result
         argTypes.addInt();
         argTypes.addInt();
         // Note that ScalarFunctions *always* return a single value.

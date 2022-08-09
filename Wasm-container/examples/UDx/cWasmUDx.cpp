@@ -19,6 +19,7 @@ class cWasmUDx_sum : public ScalarFunction
         // when compiling
         wasm_file = WASMFILE;
         ws = udx_get_wasm_state();
+        // Identify the function to load from the module
         if(! udx_setup(wasm_file, ws, "sum", &error_str)) {
             vt_report_error(0,
                             "Cannot initialize wasm from %s; %s",
@@ -50,7 +51,8 @@ class cWasmUDx_sum : public ScalarFunction
                     int result = 0;
                     const int a = static_cast<int>(argReader.getIntRef(0));
                     const int b = static_cast<int>(argReader.getIntRef(1));
-                    if(! udx_call_func(a, b, &result, ws, &error_str)) {
+                    // Function takes 2 ints, returns 1 int
+                    if(! udx_call_func_2i_1i(a, b, &result, ws, &error_str)) {
                         vt_report_error(0,
                                         "wasm_function_call to %s failed: %s",
                                         wasm_file,
@@ -81,6 +83,7 @@ class cWasmUDx_sumFactory : public ScalarFunctionFactory
                               ColumnTypes &argTypes,
                               ColumnTypes &returnType)
     {
+        // Function takes 2 int arguments, returns 1 int result
         argTypes.addInt();
         argTypes.addInt();
         // Note that ScalarFunctions *always* return a single value.
