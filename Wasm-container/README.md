@@ -1,10 +1,10 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg)](https://opensource.org/licenses/Apache-2.0)
 
-# Vertica Wasm UDx experimental container
+# Vertica Web Assembly UDx experimental container
 
 [Vertica](https://www.vertica.com/) is a massively scalable analytics data warehouse that stores your data and performs analytics on it all in one place.
 
-This repository creates an image that makes it reasonably easy to experiment with developing User-Defined Extensions (UDxes) for Vertica using WebAssembly.
+This repository creates a container image that makes it reasonably easy to experiment with developing User-Defined Extensions (UDxes) for Vertica using WebAssembly.
 
 Vertica has long supported UDxes in a number of languages:
 
@@ -13,15 +13,34 @@ Vertica has long supported UDxes in a number of languages:
 - Python
 - R
 
-Java, Python and R UDxes are loaded into auxiliary programs implementing the appropriate runtime.  C++ UDxes may be loaded into a separate program (known as "fenced"), or may be linked directly into the Vertica binary (known as "unfenced").  (All Java, Python, and R UDxes are fenced.)
+This container creates an environment for creating UDxes in Rust (and,
+as a side-effect, plain-old C).
 
-Unfenced UDxes have a performance advantage over fenced since functions are implemented as function calls instead of as remote procedure calls.  There is a corresponding savings in the cost of data movement (data are pushed onto or popped off of the stack instead of transmitted through a socket).  However, Unfenced UDxes are a little risky: a bug in an unfenced UDx risks crashing the Vertica server.
+Java, Python and R UDxes are loaded into auxiliary programs
+implementing the appropriate runtime.  C++ UDxes may be loaded into a
+separate program (known as "fenced"), or may be linked directly into
+the Vertica binary (known as "unfenced", the implication being there's
+nothing between your UDx code and the innards of Vertica).  All Java, Python, and R UDxes are fenced.
+
+Invoking unfenced functions is done by calling a function with
+arguments.  Invoking fenced functions is done through remote procedure
+calls.
+This means 
+unfenced UDxes have a performance advantage over fenced UDxes.  There is a corresponding savings in the cost of data movement (data are pushed onto or popped off of the stack instead of transmitted through a socket).  However, unfenced UDxes are risky: a bug in an unfenced UDx risks crashing the Vertica server.
 
 Safe programming in C++ can be a challenge.
 
-Enter Web Assembly (Wasm).  Wasm code runs in a sandbox with clearly-defined interaction between the Wasm and the host program.  Wasm code accesses memory in its sandbox, and cannot access memory outside its sandbox.  
+Enter Web Assembly (Wasm).  Wasm code runs in a sandbox with
+clearly-defined interaction between the Wasm and the host program.
+Wasm code accesses memory in its sandbox, and cannot access memory
+outside its sandbox.  The host program controls what enters and leaves
+the sandbox.
 
-Supporting Web Assembly IDxes lets us support unfenced UDxes in any language that can compile to Wasm, confident that the user-defined code cannot corrupt Vertica's data structures.
+The Web Assembly sandbox provides most of the safety guarantees we get
+from executing a UDx in a separate process using remote procedure
+calls. Supporting Web Assembly UDxes lets us support unfenced UDxes in
+any language that can compile to Wasm, confident that the user-defined
+code cannot corrupt Vertica's data structures.
 
 For details about developing Vertica UDxes, see [Extending Vertica](https://www.vertica.com/docs/latest/HTML/Content/Authoring/ExtendingVertica/ExtendingVertica.htm).
 
@@ -30,6 +49,7 @@ This container just packages WebAssembly tools for generating .wasm files in C a
 ## Prerequisites
 - [Docker Desktop](https://www.docker.com/get-started) or [Docker Engine](https://docs.docker.com/engine/install/).
 - `make`: a program for building programs.
+- A copy of a Vertica `.deb` release file.
 
 # Supported Platforms
 
@@ -51,6 +71,41 @@ This container packages:
 # Building the container
 
 The container is built using the command `make`.  `make` will create a Docker image called `wasm-playground:ubuntu`.
+The Makefile requires that you store a Vertica DEB file in the top-level directory of your cloned repository. The container inherits the privileges and user ID from the user executing the container.
+
+## Build variables
+
+You can include build variables in the build process to customize the
+container. The following table describes the available variables: 
+
+| Name                      | Definition |
+|---------------------------|------------|
+| PACKAGE | When there is more than one Vertica DEB file in the top-level directory, this variable specifies which file to use in the build process. |
+| VERTICA_VERSION | The version number of the Vertica binary used in the build process. This value is optional for a [canonically-named Vertica binary](#building-with-a-canonically-named-vertica-binary).<br> You can use this variable to build containers for different Vertica versions. |
+
+For example, you might build multiple containers to develop UDxs for multiple Vertica versions. To help distinguish between containers, `VERTICA_VERSION` in the build command. If you set `VERTICA_VERSION=11.0.0-0`, the full container specification is `vwasmsdk:ubuntu-11.0.0-0`.
+
+## Building with a canonically-named Vertica binary
+
+The build process requires the Vertica version. The `Makefile` can extract this information automatically from a canonically-named DEB file in one of the following formats:
+
+```shell
+$ vertica_12.0.1-0_amd64.deb
+```
+
+The `Makefile` extracts the Vertica version (12.0.1-0). If the Vertica binary uses this format, run `make` to build the container. For example, the following command builds a UDx container with a canonically-named DEB file:
+
+```shell
+$ make
+```
+
+## Building with variables
+
+If the RPM or DEB file does not use the canonical-naming convention, define the `VERTICA_VERSION` variable in the make command:
+
+```shell
+$ make TARGET=deb VERTICA_VERSION=11.0.0-0
+```
 
 # Using the container
 
