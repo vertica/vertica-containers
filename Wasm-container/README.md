@@ -154,7 +154,7 @@ Make targets are:
 
 - `run_abstract_runner`: invokes `abstract_runner` with both the `sum.c.wasm` and `sum.rs.wasm` files, invoking the `sum` function in them.  Prints "happy, happy, joy, joy" if the module returns the sum of the two arguments the program passes in.
 
-## An experiment with creating Wasm UDxes
+# An experiment with creating Wasm UDxes
 
 In the `examples/UDx` directory you will find prototype UDxes written
 in C-compiled-to-Wasm and Rust-compiled-to-Wasm.
@@ -181,15 +181,19 @@ pub extern "C" fn sum(a: u32, b: u32) -> u32 {
 }
 ```
 
-Tthe corresponding C++ boilerplate is in
+Tthec corresponding C++ boilerplate is in
 `examples/UDx/rustWasmUDx.cpp`.  For an explanation of the
 boilerplate, see [Extending
 Vertica](https://www.vertica.com/docs/latest/HTML/Content/Authoring/ExtendingVertica/ExtendingVertica.htm).
 
+What we're doing here is telling Vertica that we've produced a C++
+UDx.  That the C++ UDx happens to load and interpret another file to
+do the bulk of its computation isn't important to Vertica.
+
 As with other C++ UDxes, one creates a factory class (here called
-`cWasmUDx_sumFactory`) and a function class (here called `cWasmUDx_sum`).  In this case, the factory class exists
+`rustWasmUDx_sumFactory`) and a function class (here called `rustWasmUDx_sum`).  In this case, the factory class exists
 primarily to tell Vertica the function prototype for the
-`cWasmUDx_sum` function --- that it takes two integer arguments
+`rustWasmUDx_sum` function --- that it takes two integer arguments
 (`argTypes.addInit()`) and returns an integer `returnType.addInt()`).
 
 Function classes can be complicated, but for our simple function, it
@@ -212,7 +216,157 @@ has three methods:
   to indicate that we've written all the results for this row, and
   `argReader.next` is used to read the next row.
 
-### Shortcomings of this implementation
+# Loading and executing the UDx
+
+## Starting a test Vertica using the container
+
+Having defined `$WASMHOME` in my login shell, I start a Vertica to use
+in testing my UDx in the following way:
+
+```shell
+VERTICA_VERSION=12.0.1-0 VWASM_MOUNT=$WASMHOME ./vwasm-vertica 
+```
+This runs teh `vwasm-vertica` shell script with the following
+environment variables defined:
+
+- `VERTICA_VERSION` -- what Vertica version the container was built
+  with.  If you look inside the shell script you'll see that the script
+  has a default value for the `VERTICA_VERSION`:
+  `${VERTICA_VERSION:-12.0.1-0}` (in this case, defining
+  `VERTICA_VERSION` on the command line is redundant).
+
+- `VWASM_MOUNT` -- is a list of directories, separated by colons, that
+  the container should mount.
+
+When the `vwasm-vertica` container starts, it will print a message:
+
+```
+Run
+      docker logs vwasmsdk-vertica
+to view startup progress
+
+Don't stop container until above command prints 'Vertica is now running'
+To stop:
+    docker stop vwasmsdk-vertica
+
+When executing outside of a VWasm container, you can connect to this vertica
+using
+    vsql -p 8331
+
+If executing inside a VWasm container (where you did your Wasm development),
+just 'vsql' should suffice
+
+```
+
+The port number in `vsql -p 8331` changes with each invocation, and is only
+meaningful outside of any containers.  If you start `vsql` from 
+within a `vwasm-bash` shell you don't need to specify the port number
+(since, inside the container, Vertica's default port number is
+available with its default "name", 5433).
+
+It will take several seconds for Vertica to start (longer the first
+time you start the container, as it will be initializing the
+database).  `docker log vwasmsdk-vertica` will give you a peek into
+the container startup.
+
+You can leave the container running for a long time as you test, you
+don't need to start and stop it.
+
+## Loading your UDx into your test Vertica
+
+### C version
+
+The C UDx is loaded in the following fashion:
+
+```sql
+\set clibfile '\'PATH_TO_WASM/examples/UDx/build/cWasmUDx.so\''
+CREATE OR REPLACE LIBRARY cWasmUDx AS :clibfile LANGUAGE 'C++';
+```
+
+The first line defines the absolute path of the `cWasmUDx.so` file as
+a `vsql` variable (substitute the pathname of your `.so` file).
+
+The second line has Vertica initialize the library.
+
+```sql
+CREATE OR REPLACE FUNCTION cWasmUDx_sum AS LANGUAGE 'C++'
+       NAME 'cWasmUDx_sumFactory' LIBRARY cWasmUDx NOT FENCED;
+```
+This command tells Vertica the name of the factory function.  The
+factory function, once invoked, will tell Vertica the name and
+prototype of the actual function.
+
+### Rust version
+
+The Rust UDx is loaded in the following fashion:
+
+```sql
+\set rustlibfile '\'PATH_TO_WASM/examples/UDx/build/cWasmUDx.so\''
+CREATE OR REPLACE LIBRARY rustWasmUDx AS :rustlibfile LANGUAGE 'C++';
+```
+
+The first line defines the absolute path of the `rustWasmUDx.so` file as
+a `vsql` variable (substitute the pathname of your `.so` file).
+
+The second line has Vertica initialize the library.  Yes, even though
+the Wasm came from Rust, as far as Vertica is concerned this is a C++ UDx.
+
+```sql
+CREATE OR REPLACE FUNCTION rustWasmUDx_sum AS LANGUAGE 'C++'
+       NAME 'rustWasmUDx_sumFactory' LIBRARY rustWasmUDx NOT FENCED;
+```
+
+## Invoking the function
+
+First, creat a table to operate on:
+
+```sql
+create table t2 (a int, b int);
+copy t2 from stdin delimiter ',' direct;
+3, 1
+4, 1
+5, 9
+2, 6
+\.
+```
+
+Now we can invoke the functions on the table:
+
+```sql
+
+select cWasmUDx_sum(a, b) from t2;
+select rustWasmUDx_sum(a, b) from t2;
+select nonWasmUDx_sum(a, b) from t2;
+select a + b from t2;
+```
+The first two SQL commands will add the `a` and `b` columns of the table `t2`
+together, returning a sum for each row of the table.
+
+The third SQL command uses the UDx-without-Wasm `nonWasmUDx.so`
+function to establish a "cost of UDx" baseline.
+
+The fourth SQL command does the same calculation using native SQL.
+
+To make things a little more interesting, create a table `t3` with,
+say, a million rows.  Then you can run these commands:
+
+```sql
+
+\timing on
+create table ct4 as select cWasmUDx_sum(c0, c1) from t3;
+create table rst4 as select rustWasmUDx_sum(c0, c1) from t3;
+create table nont4 as select nonWasmUDx_sum(c0, c1) from t3;
+create table dt4 as select c0 + c1 from t3;
+\timing off
+```
+
+When I run these on my machine, I get results that show an 8% penalty
+from raw SQL to the `nonWasm` (the "UDx tax") and a 10% penalty going
+from pure-C++ UDx (`nonWasm`) to either of the Wasm-based UDxes (on my
+system the Rust module is slightly faster than the C module, for some
+reason). 
+
+# Shortcomings of this implementation
 
 The following are shortcomings of this Proof-of-concept implementation that we plan to
 address in the near future
