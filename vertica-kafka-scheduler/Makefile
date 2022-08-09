@@ -1,13 +1,17 @@
 # Makefile for vertica-demo
 
 VERTICA_INSTALL?=/opt/vertica
-VERTICA_VERSION?=latest
+VERTICA_VERSION?=$(shell awk 'match($$1, /Version=(.*)/) { print substr($$1, RSTART+8, RLENGTH-8) }' $(VERTICA_INSTALL)/packages/kafka/package.conf 2>/dev/null || echo latest)
 TAGS=$(patsubst %,-t vertica/kafka-scheduler:%,$(VERTICA_VERSION))
 VERSION?=latest
 SHELL:=/bin/bash
 
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' "$(firstword $(MAKEFILE_LIST))"
+
+.PHONY: build
+version: ## display the Vertica version to use (override with VERTICA_VERSION)
+	@echo $(VERTICA_VERSION)
 
 java: $(VERTICA_INSTALL)/java ## copy the local install of the java libraries
 	cp -r $< $@
@@ -17,7 +21,7 @@ kafka: $(VERTICA_INSTALL)/packages/kafka ## copy the local install of the kafka 
 
 .PHONY: build
 build: java kafka ## build the docker image
-	docker build . -t vertica/kafka-scheduler
+	docker build . -t vertica/kafka-scheduler:$(word 1,$(VERTICA_VERSION))
 
 .PHONY: push
 push: java kafka ## push the docker image up to docker hub
@@ -30,5 +34,9 @@ push: java kafka ## push the docker image up to docker hub
 
 .PHONY: test
 test: ## suite of tests to make sure everything is working
-	docker run vertica/kafka-scheduler vkconfig --help >/dev/null
-	./example.sh
+	VERTICA_VERSION=$(word 1,$(VERTICA_VERSION)) ./example.sh
+
+.PHONY: clean
+clean: ## clean up local directory and docker image created by "make build"
+	rm -rf java kafka
+	docker image rm vertica/kafka-scheduler:$(word 1,$(VERTICA_VERSION))
