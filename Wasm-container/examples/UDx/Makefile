@@ -19,7 +19,7 @@ SDK_HOME?=/opt/vertica/sdk
 SDK_JAR?=/opt/vertica/
 
 CXX=g++
-CXXFLAGS:=$(CXXFLAGS) -I .. -I $(SDK_HOME)/include \
+CXXFLAGS:=$(CXXFLAGS) -O2 -I .. -I $(SDK_HOME)/include \
 	-I HelperLibraries -g -Wall -Wno-unused-value \
 	-shared -fPIC --std=c++11 \
 	-D_GLIBCXX_USE_CXX11_ABI=0 
