@@ -83,7 +83,7 @@ container. The following table describes the available variables:
 | PACKAGE | When there is more than one Vertica DEB file in the top-level directory, this variable specifies which file to use in the build process. |
 | VERTICA_VERSION | The version number of the Vertica binary used in the build process. This value is optional for a [canonically-named Vertica binary](#building-with-a-canonically-named-vertica-binary).<br> You can use this variable to build containers for different Vertica versions. |
 
-For example, you might build multiple containers to develop UDxs for multiple Vertica versions. To help distinguish between containers, `VERTICA_VERSION` in the build command. If you set `VERTICA_VERSION=11.0.0-0`, the full container specification is `vwasmsdk:ubuntu-11.0.0-0`.
+For example, you might build multiple containers to develop UDxes for multiple Vertica versions. To help distinguish between containers, `VERTICA_VERSION` in the build command. If you set `VERTICA_VERSION=11.0.0-0`, the full container specification is `vwasmsdk:ubuntu-11.0.0-0`.
 
 ## Building with a canonically-named Vertica binary
 
@@ -104,14 +104,14 @@ $ make
 If the RPM or DEB file does not use the canonical-naming convention, define the `VERTICA_VERSION` variable in the make command:
 
 ```shell
-$ make TARGET=deb VERTICA_VERSION=11.0.0-0
+$ make VERTICA_VERSION=11.0.0-0
 ```
 
 # Using the container
 
 ## Setting up your Web Assembly toolbox
 
-To use this installation, before you run the container interactively, use it to run the shell script `/usr/WebAssembly/tools/copy-template-to-sandbox` with an argument specifying the location of your WebAssembly toolbox (refered to as `$WASMHOME` above), .e.g.,
+To use this installation, before you run the container interactively, use it to run the shell script `/usr/WebAssembly/tools/copy-template-to-sandbox` with an argument specifying the location of your WebAssembly toolbox (referred to as `$WASMHOME` above), .e.g.,
 
 ```shell
 # Define $WASMHOME for this inside-the-container shell
@@ -161,9 +161,9 @@ docker run \
 
 The `docker run` options are:
 
-- `-u $user_id`: By initializeing `user_id` with the output of the `id -u` command, processes inside the container run with your UID so you can edit and modify files in your working directories.
+- `-u $user_id`: By initializing `user_id` with the output of the `id -u` command, processes inside the container run with your UID so you can edit and modify files in your working directories.
 - `-v $SANDBOX:$SANDBOX`: mounts the host computer's `$SANDBOX` directory inside the container with the name `$SANDBOX` (you must, of course, define `$SANDBOX` first).  This argument is optional (e.g., if your sandbox is in your `$HOME` directory).
-- `-v $HOME:$HOME`: mounts the host computer's `$HOME` directory inside the container with the naem `$HOME`.
+- `-v $HOME:$HOME`: mounts the host computer's `$HOME` directory inside the container with the name `$HOME`.
 - `-e HOME` : passes the `$HOME` environment variable into the interactive shell in the container
 - `-it`: run an interactive shell inside the container
 - `wasm-playground:ubuntu`: the name of the container image
@@ -223,7 +223,7 @@ targets:
 
 These UDxes consist largely of boilerplate.  There are different files
 to make it easy to compare the performance of the three UDx
-implemenations against one another in the same Vertica instance.
+implementations against one another in the same Vertica instance.
 
 ### An example Rust UDx
 
@@ -236,7 +236,7 @@ pub extern "C" fn sum(a: u32, b: u32) -> u32 {
 }
 ```
 
-Tthec corresponding C++ boilerplate is in
+The corresponding C++ boilerplate is in
 `examples/UDx/rustWasmUDx.cpp`.  For an explanation of the
 boilerplate, see [Extending
 Vertica](https://www.vertica.com/docs/latest/HTML/Content/Authoring/ExtendingVertica/ExtendingVertica.htm).
@@ -249,7 +249,7 @@ As with other C++ UDxes, one creates a factory class (here called
 `rustWasmUDx_sumFactory`) and a function class (here called `rustWasmUDx_sum`).  In this case, the factory class exists
 primarily to tell Vertica the function prototype for the
 `rustWasmUDx_sum` function --- that it takes two integer arguments
-(`argTypes.addInit()`) and returns an integer `returnType.addInt()`).
+(`argTypes.addInt()`) and returns an integer `returnType.addInt()`).
 
 Function classes can be complicated, but for our simple function, it
 has three methods:
@@ -276,12 +276,27 @@ has three methods:
 ## Starting a test Vertica using the container
 
 Having defined `$WASMHOME` in my login shell, I start a Vertica to use
-in testing my UDx in the following way:
+in testing my UDx as described below.
 
+Before starting a new Vertica-container, I make sure there is not one
+already running (if there is, I can reuse it):
+```shell
+docker ps | grep vwasm-vertica
+```
+
+If I want to stop that container so I can start a new one, I run:
+```shell
+docker stop vwasm-vertica
+```
+Followed by
+```shell
+docker rm vwasm-vertica
+```
+Then I can start a new Vertica-container:
 ```shell
 VERTICA_VERSION=12.0.1-0 VWASM_MOUNT=$WASMHOME ./vwasm-vertica 
 ```
-This runs teh `vwasm-vertica` shell script with the following
+This runs the `vwasm-vertica` shell script with the following
 environment variables defined:
 
 - `VERTICA_VERSION` -- what Vertica version the container was built
@@ -292,6 +307,9 @@ environment variables defined:
 
 - `VWASM_MOUNT` -- is a list of directories, separated by colons, that
   the container should mount.
+
+The `vwasm-vertica` command starts a container with a Vertica running
+inside it.  This container will be named `vwasmsdk-vertica`.
 
 When the `vwasm-vertica` container starts, it will print a message:
 
@@ -310,14 +328,22 @@ using
 
 If executing inside a VWasm container (where you did your Wasm development),
 just 'vsql' should suffice
-
 ```
 
 The port number in `vsql -p 8331` changes with each invocation, and is only
-meaningful outside of any containers.  If you start `vsql` from 
-within a `vwasm-bash` shell you don't need to specify the port number
-(since, inside the container, Vertica's default port number is
-available with its default "name", 5433).
+meaningful outside of any containers.  `vwasm-bash` does not connect
+to the container running Vertica, to connect to that container, use
+`run-shell-in-container`:
+
+```shell
+run-shell-in-container.sh -n vwasmsdk-vertica
+```
+You may want to set up your Wasm environment as done when starting
+`vwasm-bash`, though this is not necessary if you're just going to
+load libraries using `vsql`.
+
+You will want to use `vsql -U dbadmin` to load UDx libraries,
+since the Vertica in that container does not have any users defined.
 
 It will take several seconds for Vertica to start (longer the first
 time you start the container, as it will be initializing the
@@ -373,7 +399,7 @@ CREATE OR REPLACE FUNCTION rustWasmUDx_sum AS LANGUAGE 'C++'
 
 ## Invoking the function
 
-First, creat a table to operate on:
+First, create a table to operate on:
 
 ```sql
 create table t2 (a int, b int);
@@ -426,21 +452,27 @@ reason).
 The following are shortcomings of this Proof-of-concept implementation that we plan to
 address in the near future
 
-#### Should generate the C++ boilerplate automatically 
+## Why separate `wasm-bash` and `run-shell-in-container.sh` commands?
+
+`wasm-bash` creates a light-weight container for doing development.
+`run-shell-in-container.sh` connects to a container in which there is
+a Vertica running.  Probably these commands should be combined.
+
+## Should generate the C++ boilerplate automatically 
 
 The UDx for using `sum.c.wasm` is the same as for `sum.rs.wasm`, save for:
 - a change in the name of the Wasm file to load
 - the name of the class changes
 - the name of the factory class changes
 
-#### `udx_call_func_2i_1i`
+## `udx_call_func_2i_1i`
 
 (C++ has mangled names for close to forty years, perhaps we can do
 better?)  If we're generating boilerplate, the `udx_call_func` routine
 can perhaps be inlined instead of a function call, which means we
 don't have to tiptoe around C calling conventions.
 
-#### Absolute path on all nodes needed for `.wasm` files
+## Absolute path on all nodes needed for `.wasm` files
 
 Vertica is a distributed database that runs on a cluster of machines.
 Copies of the Wasm files need to be at a well-known place in all nodes
