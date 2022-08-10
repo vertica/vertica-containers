@@ -56,11 +56,11 @@ wasm_func_t *vwasm_find_exported_function(const char* name,
                                           wasm_extern_vec_t *exports) {
 
     if(exporttypes->size != 0) {
-        for(int datum = 0; datum < exporttypes->size; ++datum) {
-            const wasm_externtype_t *etp = wasm_exporttype_type(exporttypes->data[datum]);
+        for(int export_index = 0; export_index < exporttypes->size; ++export_index) {
+            const wasm_externtype_t *etp = wasm_exporttype_type(exporttypes->data[export_index]);
             if(wasm_externtype_kind(etp) == WASM_EXTERN_FUNC) {
                 // does the wasm_name_t match the function name?
-                const wasm_name_t *namebytes = wasm_exporttype_name(exporttypes->data[datum]);
+                const wasm_name_t *namebytes = wasm_exporttype_name(exporttypes->data[export_index]);
                 // No need to check for string equality if the lengths are different
                 if(namebytes->size == strlen(name)) {
                     bool found_it = true;
@@ -71,7 +71,7 @@ wasm_func_t *vwasm_find_exported_function(const char* name,
                         }
                     }
                     if(found_it)
-                        return wasm_extern_as_func(exports->data[datum]);
+                        return wasm_extern_as_func(exports->data[export_index]);
                 }
             }
         }

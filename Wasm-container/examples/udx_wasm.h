@@ -16,5 +16,4 @@ bool udx_call_func_2i_1i(const int a,
                          int *place_to_put_result,
                          void* ws,
                          char** place_to_put_errormsg_ptr);
-
 #endif // udx_wasm_h
