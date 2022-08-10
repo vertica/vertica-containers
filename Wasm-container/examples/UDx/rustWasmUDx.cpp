@@ -56,7 +56,7 @@ class rustWasmUDx_sum : public ScalarFunction
                     const int a = static_cast<int>(argReader.getIntRef(0));
                     const int b = static_cast<int>(argReader.getIntRef(1));
                     // function takes 2 int args, returns 1 int result
-                    if(! udx_call_func2i_1i(a, b, &result, ws, &error_str)) {
+                    if(! udx_call_func_2i_1i(a, b, &result, ws, &error_str)) {
                         vt_report_error(0,
                                         "wasm_function_call to %s failed: %s",
                                         wasm_file,
