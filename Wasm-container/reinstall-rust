@@ -21,7 +21,7 @@
 case $# in
     1) WORKDIR=$1
        ;;
-    *) echo $0: usage: $0 value for HOME directory.
+    *) echo $0: usage: $0 value for WASMHOME directory.
        exit 1
        ;;
 esac          
