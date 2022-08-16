@@ -23,3 +23,20 @@ The UDx-container directory packages in a container the following resources requ
 - Google protobuf compiler
 - Python interpreter
 - Tools to invoke the UDx
+
+## [Kafka Scheduler](vertica-kafka-scheduler)
+
+This is a container for [the Vertica Kafka Scheduler](https://hub.docker.com/repository/docker/vertica/kafka-scheduler)
+on Docker Hub.  The Kafka Scheduler is a standalone java app that automatically
+consumes data from one or more Kafka topics, and loads structured data into
+Vertica.  Automatically loading streaming data has a number of advantages over
+manually using COPY:
+
+* The streamed data automatically appears in your database. The frequency with
+which new data appears in your database is governed by the scheduler's frame
+duration.
+* The scheduler provides an exactly-once consumption process. The schedulers
+manage offsets for you so that each message sent by Kafka is consumed once.
+* You can configure backup schedulers to provide high-availability. Should the
+primary scheduler fail for some reason, the backup scheduler automatically
+takes over loading data.
