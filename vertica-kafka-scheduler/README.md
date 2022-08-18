@@ -110,9 +110,9 @@ docker run -it \
         vkconfig launch --conf /etc/vkconfig.conf &
 ```
 The preceding command mounts the following files and directories in the scheduler container filesystem:
-- Local `vkconfig.conf` file in the container's `/etc` directory
-- Local `vkafka-log-config-debug.xml` file in the container's `/opt/vertica/packages/kafka/config` directory. This file structures log messages to help troubleshoot scheduler issues.
-- Local `/log` directory in the container's `/opt/vertica/log` directory to store logs to troubleshoot scheduler issues.
+- Local `vkconfig.conf` configuration file in the container's `/etc` directory
+- Local `vkafka-log-config-debug.xml` file in the container's `/opt/vertica/packages/kafka/config` directory. This file configures log messages to help troubleshoot scheduler issues.
+- Local `/log` directory in the container's `/opt/vertica/log` directory to write logs to help troubleshoot scheduler issues.
 
 Additionally, the command defines the following:
 - Passes the Docker `--user` command to define user that executes this `docker run` command as the default user within the scheduler container.
@@ -132,7 +132,6 @@ $ make build VERTICA_INSTALL=/path/to/vertica
 |:----------------|:------------|
 | VERTICA_INSTALL | The location of your Vertica binary installation. Define this variable if you want to copy the local install of the Java libraries.<br>**Default**: `/opt/vertica`. |
 | VERTICA_VERSION | The Vertica version that you want to use to build the vkconfig container.<br>**Default**: `latest`.|
-| VERSION | ?????????? |
 
 # Repository contents overview
 
@@ -189,31 +188,6 @@ A bash script that configures and runs a scheduler with test data, and logs the 
 This github repo builds a Vertica-Kafka scheduler docker container for the
 purposes of streaming data from Kafka to Vertica.  It requires Docker or some
 compatible container environment.
-
-## Quickstart
-
-```
-# Commands to configure a scheduler
-docker run vertica/kafka-scheduler vkconfig scheduler --help
-docker run vertica/kafka-scheduler vkconfig cluster --help
-docker run vertica/kafka-scheduler vkconfig source --help
-docker run vertica/kafka-scheduler vkconfig target --help
-docker run vertica/kafka-scheduler vkconfig load-spec --help
-docker run vertica/kafka-scheduler vkconfig microbatch --help
-docker run vertica/kafka-scheduler vkconfig statistics --help
-
-# Launching the scheduler with some useful docker options
-# use "-v" to map the optional conf file to the container's /etc/vconfig.conf
-# use "-v" to map the log config file to the container's /opt/vertica/packages/kafka/config/vkafka-log-config.xml
-# use "-v" to map the writable log directory to the internal /opt/vertica/log
-# use "--user" to run with the credentials of the log directory
-docker run -it \
-    -v $PWD/vkconfig.conf:/etc/vkconfig.conf vertica/kafka-scheduler \
-    -v $PWD/vkafka-log-config-debug.xml:/opt/vertica/packages/kafka/config/vkafka-log-config.xml \
-    -v $PWD/log:/opt/vertica/log \
-    --user $(perl -E '@s=stat "'"$PWD/log"'"; say "$s[4]:$s[5]"') \
-        vkconfig launch --conf /etc/vkconfig.conf
-```
 
 ## Example
 `example.sh` is a full example of configuring and running a scheduler.  It uses
