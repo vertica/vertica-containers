@@ -1,9 +1,9 @@
 
 # Vertica-Kafka Scheduler
 
-This repository provides the tools to maintain and test a containerized version of the [Vertica Kafka Scheduler](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/AutomaticallyCopyingDataFromKafka.htm), a standalone Java application that automatically consumes data from one or more Kafka topics, and then loads it as structured data into Vertica. The scheduler is controlled by the `vkconfig` command line script.
+This repository provides the tools to build and maintain a containerized version of the [Vertica Kafka Scheduler](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/AutomaticallyCopyingDataFromKafka.htm), a standalone Java application that automatically consumes data from one or more Kafka topics and then loads the structured data into Vertica. The scheduler is controlled by the `vkconfig` command line script.
 
-You can use the official [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) image, or you can use the Dockerfile in this repo to build a custom vkconfig image. The Docker image is based on [alpine:3.14](https://hub.docker.com/_/alpine) and includes the [openjdk8-jre](https://hub.docker.com/_/openjdk).
+You can use the official [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) image, or you can use the Dockerfile in this repo to build a custom vkconfig image. The official image is based on [alpine:3.14](https://hub.docker.com/_/alpine) and includes the [openjdk8-jre](https://hub.docker.com/_/openjdk).
 
 ## Prerequisites
 
@@ -12,37 +12,31 @@ You can use the official [vertica/kafka-scheduler](https://hub.docker.com/r/vert
 - [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) image
 - (Optional) [Docker Compose](https://docs.docker.com/compose/install/) to run `example.sh`
 
-## Setting up a scheduler 
+## Configure a scheduler 
 
-A scheduler is composed of individual components that define the load frequency, data type, and Vertica and Kafka configurations. After you create the scheduler, run the vertica/kafka-scheduler container with `vkconfig` to launch the scheduler with local files and directories mounted as volumes.
+A scheduler is composed of [individual components](#defining-scheduler-components) that define the load frequency, data type, and Vertica and Kafka environments. After you define properties for each component, [launch the scheduler](#launching-the-scheduler) with configuration and logging utilities mounted as volumes.
 
 ### Configuration file
 
-The configuration file provides the scheduler the following options that persist regardless of the other scheduler components:
-- `username`
-- `dbhost`
-- `dbport`
-- `config-schema`
+Each component and the running scheduler process require access to the same database and environment settings. To provide these settings, create a configuration file that provides the following:
+- `username`: Vertica database user that runs the scheduler.
+- `dbhost`: Vertica database host or IP address.
+- `dbport`: Port used to connect to the Vertica database.
+- `config-schema`: Name of the scheduler's schema.
 
-To provide the scheduler process access to these configuration values, you must mount the configuration file as a [volume](https://docs.docker.com/storage/volumes/) named vkconfig.conf in the /etc vertica/kafka-scheduler container filesystem. For example:
+The components and running scheduler process access configuration file values from within the scheduler container filesystem, so you must mount the configuration file as a [volume](https://docs.docker.com/storage/volumes/). The scheduler expects the configuration file to be named `vkconfig.conf` and stored in the `/etc` directory. For example: 
 
 ```bash
-docker run -v <local-config.conf>:/etc/vkconfig.conf <options> ...
+$ docker run -v <local-config.conf>:/etc/vkconfig.conf vertica/kafka-scheduler <options> ...
 ```
 
-For an example configuration file, see [example.conf](example.conf) in this repository.
-
-
+For a sample configuration file, see [example.conf](example.conf) in this repository.
 
 ### Scheduler components
 
-To set up a scheduler, use a single `docker run` command in the following format to mount the configuration file, select the scheduler image and version, and define the scheduler components:
+Vertica recommends that you create a scheduler and define its components as a separate step from launching the scheduler. This ensures that the scheduler configuration persists in the event of a power outage or other system failure.
 
-```bash
-$ docker run -v <local-config.conf>:/etc/vkconfig.conf <image-name>:<version> bash -c "<scheduler-configuration>"
-```
-
-In the preceding command, `<scheduler-configuration>` is a string that defines options on the following scheduler components:
+A scheduler requires the following components:
 - `scheduler`: The scheduler itself
 - `target`: The Vertica table that receives the streaming data
 - `load-spec`: Defines the parser for the streaming data
@@ -50,19 +44,50 @@ In the preceding command, `<scheduler-configuration>` is a string that defines o
 - `source`: A Kafka topic that sends data to Vertica
 - `microbatch`: Combines each of the preceding components into a single COPY statement that the Scheduler executes to load data into Vertica
 
-This repository contains the [example.sh](example.sh) script. The **Set up Scheduler** section in this script contains a complete example of how to pass a string of scheduler components and their configuration options to the `docker run` command. Each component uses the following format:
+> **NOTE**
+> Additionally, the scheduler container includes the `statistics` component. This component queries the [stream_microbatch_history table](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/KafkaTables/stream_microbatch_history.htm) for runtime statistics.
 
-```bash 
-vkconfig <component> --add \
---conf /etc/vkconfig.conf \
---<option> <value> [\ 
-... ]
+The following command returns a list of all available options for a component:
+
+```bash
+$ docker run vertica/kafka-scheduler vkconfig <component> --help
 ```
 
-> **NOTE**
-> You must pass the `--conf /etc/vkconfig.conf` option to each component in the scheduler.
+For example, to view the description of each component in the microbatch, enter the following: 
 
-For example, the following snippet defines the first microbatch component, which combines previously defined components into one COPY statement definition:
+```bash
+$ docker run vertica/kafka-scheduler vkconfig microbatch --help
+```
+
+### Create a scheduler
+
+To create a scheduler and its components, execute a `docker run` command that does the following:
+- Mounts a configuration file as a volume.
+- Defines the scheduler image name and version.
+- Defines scheduler components as a single string with the `bash -c` script option.
+
+The scheduler component string must first define the `scheduler` itself, and then add the additional required components with the `--add` option. Each component is separated by a semi-colon. You must pass the `--conf /etc/vkconfig.conf` option to each component definition to provide environment settings.
+
+The following command provides an example format:
+
+```bash
+$ docker run \
+    -v <local-config.conf>:/etc/vkconfig.conf \
+    vertica/kafka-scheduler:<version> bash -c "
+        vkconfig scheduler \ 
+          -- conf /etc/vkconfig.conf \
+          <scheduler-options> ...; \
+        vkconfig <component-1> --add \
+          -- conf /etc/vkconfig.conf \
+          <component-1-options> ...; \
+        vkconfig <component-2> --add \
+          -- conf /etc/vkconfig.conf \
+          <component-2-options> ...; \
+        ...
+        "
+```
+
+For a complete example, see the **Set up Scheduler** section in the [example.sh](example.sh) script in this repository. The following snippet defines the first microbatch component in the script command:
 
 ```bash
 $ docker run \
@@ -80,43 +105,28 @@ vkconfig microbatch --add \
 ...
 ```
 
-For a list of all available options for each component, navigate to the top-level directory in this repository and run the following command:
-
-```bash
-docker run vertica/kafka-scheduler vkconfig <component> --help
-```
-
-For example, to view the description of each component in the preceding `vkconfig microbatch --add \ ...` command, enter the following: 
-
-```bash
-docker run vertica/kafka-scheduler vkconfig microbatch --help
-```
-
-> **NOTE**
-> Additionally, this container includes the `statistics` component that queries the [stream_microbatch_history table](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/KafkaTables/stream_microbatch_history.htm) for runtime statistics.
-
 ## Launching the scheduler
 
-After you define a scheduler and the required components, use the `vkconfig launch` command to instruct the scheduler to start scheduling microbatches.
+After you [create a scheduler](#create-a-scheduler), launch the scheduler to begin scheduling microbatches. To launch a scheduler, execute a `docker run` command that does the following:
+- Mounts a configuration file as a volume.
+- Specifies the scheduler image name.
+- Mounts the local `vkafka-log-config-debug.xml` file in the container's `/opt/vertica/packages/kafka/config` directory. This file configures log messages to help troubleshoot scheduler issues.
+- Mounts the local `/log` directory in the container's `/opt/vertica/log` directory to write logs to help troubleshoot scheduler issues.
+- Passes the Docker `--user` command to specify the user.
 
-When you execute the following `docker run` command from the top-level directory of this repository, it executes the `vkconfig launch` command to start the scheduler as a background process:
+The following command provides an example format when executed from the top-level directory of your cloned repository:
 
 ```bash
-docker run -it \
+$ docker run -it \
     -v $PWD/vkconfig.conf:/etc/vkconfig.conf vertica/kafka-scheduler \
     -v $PWD/vkafka-log-config-debug.xml:/opt/vertica/packages/kafka/config/vkafka-log-config.xml \
     -v $PWD/log:/opt/vertica/log \
     --user $(perl -E '@s=stat "'"$PWD/log"'"; say "$s[4]:$s[5]"') \
         vkconfig launch --conf /etc/vkconfig.conf &
 ```
-The preceding command mounts the following files and directories in the scheduler container filesystem:
-- Local `vkconfig.conf` configuration file in the container's `/etc` directory
-- Local `vkafka-log-config-debug.xml` file in the container's `/opt/vertica/packages/kafka/config` directory. This file configures log messages to help troubleshoot scheduler issues.
-- Local `/log` directory in the container's `/opt/vertica/log` directory to write logs to help troubleshoot scheduler issues.
-
-Additionally, the command defines the following:
-- Passes the Docker `--user` command to define user that executes this `docker run` command as the default user within the scheduler container.
-- Executes the `vkconfig launch` command as a background process, passing the configuration file as an option.
+Additionally, the preceding command does the following:
+- Defines the `--user` with a Perl script that extracts the `/log` file owner and group information, and then formats those values in `user:group` format.
+- Executes `vkconfig launch` as a background process.
 
 # Building a custom scheduler container
 
