@@ -87,7 +87,7 @@ $ docker run \
         "
 ```
 
-For a complete example, see the **Set up Scheduler** section in the [example.sh](example.sh) script in this repository. The following snippet defines the first microbatch component in the script command:
+For a complete example, see the **Set up Scheduler** section in the [example.sh](example.sh) script in this repository. The following snippet from that section defines the first `microbatch` component:
 
 ```bash
 $ docker run \
