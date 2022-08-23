@@ -8,7 +8,7 @@ WASM_CFLAGS := ${shell wasmer config --cflags}
 all: run_hello run_abstract_runner
 
 clean:
-	rm -f wasmer-hello *.wasm *.o *.a *.so *~ abstract_runner
+	rm -f wasmer-hello *.wasm *.o *.a *.so *~ abstract_runner comparison
 
 wasmer-hello: wasmer-hello.c
 	gcc wasmer-hello.c -I ${WASM_INCLUDE} ${WASM_LIBS} -o wasmer-hello
@@ -49,3 +49,12 @@ abstract_runner: abstract_runner.o libudx_wasm.so
 run_abstract_runner: abstract_runner sum.c.wasm sum.rs.wasm 
 	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.:$(WASM_LIBDIR) ./abstract_runner sum.c.wasm
 	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.:$(WASM_LIBDIR) ./abstract_runner sum.rs.wasm
+
+comparison.o: comparison.cpp udx_wasm.h
+	g++ -g -c comparison.cpp -I $(WASM_INCLUDE)
+
+comparison: comparison.o udx_wasm.o libudx_wasm.so
+	g++ -g comparison.o udx_wasm.o ${WASM_LIBS} -o comparison
+
+run_comparison: comparison sum.c.wasm sum.rs.wasm 
+	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.:$(WASM_LIBDIR) ./comparison
