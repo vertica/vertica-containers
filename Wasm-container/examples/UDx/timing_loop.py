@@ -93,13 +93,13 @@ prologue = [
 Command = collections.namedtuple('Command', ['label', 'command', 'cleanup'])
 
 timed_commands = [
-    Command('cWasmUDx_sum 1 row',
+    Command('cWasmUDx_sum 10M rows',
             f"CREATE TABLE ct4 AS SELECT cWasmUDx_sum(c0, c1) FROM t3",
             "DROP TABLE ct4 CASCADE"),            
-    Command('rustWasmUDx_sum 1 row',
+    Command('rustWasmUDx_sum 10M rows',
             f"CREATE TABLE rt4 AS SELECT rustWasmUDx_sum(c0, c1) FROM t3",
             "DROP TABLE rt4 CASCADE"),
-    Command('nonWasmUDx_sum 1 row',
+    Command('nonWasmUDx_sum 10M rows',
             f"CREATE TABLE nt4 AS SELECT nonWasmUDx_sum(c0, c1) FROM t3",
             "DROP TABLE nt4 CASCADE"),
     Command('select c0 + c1',
