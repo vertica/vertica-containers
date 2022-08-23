@@ -128,9 +128,24 @@ Additionally, the preceding command does the following:
 - Defines the `--user` with a Perl script that extracts the `/log` file owner and group information, and then formats those values in `user:group` format.
 - Executes `vkconfig launch` as a background process.
 
-# Building a custom scheduler container
+## Building a custom scheduler container
 
-In some circumstances, you might want to build a custom vertica/kafka-scheduler container. You can build a custom scheduler container if you have access to a Vertica binary and the associated Java libraries for your Vertica installation. By default, the Makefile assumes that you installed Vertica in the `/opt` directory. If you installed Vertica in a different directory, set the `VERTICA_INSTALL` configuration option when you build the container:
+In some circumstances, you might want to build a custom vertica/kafka-scheduler container. This repository provides a [Makefile](./Makefile) with a `build` target, and build variables that build a custom scheduler container that requires the following:
+- Vertica binary or rpm2cpio vertica.rpm | cpio -idmv and export VERTICA_INSTALL=./opt/vertica
+- Java SDK in `vertica/bin/VerticaSDK.jar`
+- Java version information in `vertica/sdk/BuildInfor.java`
+
+For additional information about Vertica and Java development, see [Java SDK](https://www.vertica.com/docs/latest/HTML/Content/Authoring/ExtendingVertica/Java/DevelopingInJava.htm).
+
+### `build` make target
+
+This repository provides a Makefile with a build target for creating a custom container:
+
+```bash
+$ make build
+```
+
+By default, the [Makefile](./Makefile) assumes that you installed Vertica in the `/opt` directory. If you installed Vertica in a different directory, set the `VERTICA_INSTALL` configuration option with the `build` target:
 
 ```bash
 $ make build VERTICA_INSTALL=/path/to/vertica
@@ -140,14 +155,22 @@ $ make build VERTICA_INSTALL=/path/to/vertica
 
 | Variable        | Description |
 |:----------------|:------------|
-| VERTICA_INSTALL | The location of your Vertica binary installation. Define this variable if you want to copy the local install of the Java libraries.<br>**Default**: `/opt/vertica`. |
-| VERTICA_VERSION | The Vertica version that you want to use to build the vkconfig container.<br>**Default**: `latest`.|
+| VERTICA_INSTALL | The location of your Vertica binary installation. Define this variable if you want to copy the local install of the Java libraries.<br>**Default**: `/opt/vertica` |
+| VERTICA_VERSION | The Vertica version that you want to use to build the scheduler container. The scheduler version must match the Vertica database version. <br>**Default**: `latest` |
 
-# Repository contents overview
+## Push to Docker Hub
+
+This repository provides the `push` make target that builds and pushes your custom scheduler container:
+
+```bash
+$ VERTICA_VERSION=latest make push
+```
+
+## Repository contents overview
 
 This repository contains the following artifacts to help [test](#testing-the-container) and [build](#building-the-vertica-kafka-container) a vkconfig container
 
-### Makefile
+## Makefile
 
 The Makefile contains the following targets:
 - `make help`: Displays the help for the Makefile.
@@ -158,7 +181,7 @@ The Makefile contains the following targets:
 - `make push`: Pushes the custom container image to the remote Docker Hub repository.
 - `make test`: Runs [example.sh](#examplesh) to validate the vkconfig configuration.
 
-### docker-compose.yaml
+## docker-compose.yaml
 
 A [Compose file](https://docs.docker.com/compose/compose-file/) that starts the following services, each as a container:
 - [Zookeeper](https://hub.docker.com/r/bitnami/zookeeper)
@@ -167,11 +190,11 @@ A [Compose file](https://docs.docker.com/compose/compose-file/) that starts the 
 
 The Compose file creates the `scheduler` network so that the containers can communicate with each other.
 
-### example.conf
+## example.conf
 
 A sample [configuration file](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/SettingUpAScheduler.htm#1). You can customize this file by replacing the default values or adding more [vkconfig script options](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/UtilityOptions/SharedUtilityOptions.htm).
 
-### example.sh
+## example.sh
 
 A bash script that configures and runs a scheduler with test data, and logs the entire process to the console. The process involves the following steps: 
 1. Sets up a test environment using the [docker-compose.yaml](#docker-composeyaml) file. The environment includes the following:
@@ -192,37 +215,3 @@ A bash script that configures and runs a scheduler with test data, and logs the 
 5. Displays the test data in the Flex table.
 6. Gracefully shuts down the scheduler.
 7. Removes the images pulled with the Compose file.
-
-# Vertica-Kafka Scheduler
-
-This github repo builds a Vertica-Kafka scheduler docker container for the
-purposes of streaming data from Kafka to Vertica.  It requires Docker or some
-compatible container environment.
-
-## Example
-`example.sh` is a full example of configuring and running a scheduler.  It uses
-docker-compose to create a kafka and vertica service, then it posts some kafka
-JSON messages, waits, then shows the messages in vertica tables.
-
-## Building docker container
-
-This is how you rebuild the docker image to customize it or update it and test it.
-This requres the vertica package installed in /opt/vertica or specified in the `make`
-command with `VERTICA_INSTALL=/wherever/opt/vertica`
-1. Clone this repository.
-2. Open a terminal in the `vertica-kafka-scheduler` directory.
-3. Install Vertica (or use rpm2cpio vertica.rpm |cpio -idmv and export VERTICA_INSTALL=./opt/vertica)
-4. Build the kafka scheduler container with
-    ```
-    make build
-    ```
-
-## Push to docker hub
-
-1. Clone this repository.
-2. Open a terminal in the `vertica-kafka-scheduler` directory.
-3. Install Vertica (or use rpm2cpio vertica.rpm |cpio -idmv and export VERTICA_INSTALL=./opt/vertica)
-4. Build and push containers
-    ```
-    VERTICA_VERSION=latest make push
-    ```
