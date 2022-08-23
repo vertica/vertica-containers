@@ -85,10 +85,14 @@ def parse_args(argv):
                         default=1, help='specify column count (default 1)')
     parser.add_argument('--colnames', action='store', dest='colnames', type=str,
                         default='', help='specify column names (if not using the default) --- one string, separated by commas')
+    parser.add_argument('-d', '--dbname', action='store', dest='dbname', type=str,
+                        help='specify database name')
     parser.add_argument('-n', '--name', action='store', dest='table_name', type=str,
                         default='', help='specify the name for the table, if not using the defaul)')
     parser.add_argument('-p', '--prefix', action='store', dest='table_prefix', type=str,
                         default='T', help='specify the prefix for the table name (e.g., "TFunc", "SFunc")')
+    parser.add_argument('-P', '--Port', action='store', dest='dbport', type=int,
+                        help='specify the VSQL port number')
     parser.add_argument('--partition', action='store', dest='partition', type=str,
                         default='', help='specify a partition statement (argument string in quotes)')
     parser.add_argument('-r', '--rows', action='store', dest='rowcount', type=int,
@@ -100,6 +104,8 @@ def parse_args(argv):
     parser.add_argument('-t', '--type', action='store', dest='coltype', type=str,
                         default='int',
                         help='specify type for all cols (default: int; choices: {int, varchar, string-of-i-and-v}')
+    parser.add_argument('-U', '--User', action='store', dest='dbuser', type=str,
+                        default='dbadmin', help=f'specify the DB user name (default: dbadmin)')
     return parser.parse_args(argv)
 
 alphabet = "abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" 
@@ -128,6 +134,15 @@ def main(argv):
 
     rows = args.rowcount
     columns = args.colcount
+
+    if args.dbport:
+        conn_info['port'] = args.dbport
+        
+    if args.dbuser:
+        conn_info['user'] = args.dbuser
+
+    if args.dbname:
+        conn_info['database'] = args.dbname
 
     if args.coltype == 'varchar':
         typestr = f'varchar({args.colsize})'
