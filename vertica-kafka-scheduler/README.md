@@ -53,7 +53,7 @@ The following command returns a list of all available options for a component:
 $ docker run vertica/kafka-scheduler vkconfig <component> --help
 ```
 
-For example, to view the description of each component in the microbatch, enter the following: 
+For example, to view the description of each `microbatch` option, enter the following: 
 
 ```bash
 $ docker run vertica/kafka-scheduler vkconfig microbatch --help
