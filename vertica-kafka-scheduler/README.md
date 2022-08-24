@@ -6,6 +6,8 @@ This repository provides the tools to build and maintain a containerized version
 You can download the official [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) image, or you can use the Dockerfile in this repo to build a custom image. The official image is based on [alpine:3.14](https://hub.docker.com/_/alpine) and includes the [openjdk8-jre](https://hub.docker.com/_/openjdk).
 
 
+For in-depth details about streaming data with Vertica and Apache Kafka, see [Apache Kafka Integration](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/KafkaIntegrationGuide.htm) in the Vertica documentation.
+
 ## Table of Contents
 
   - [Prerequisites](#prerequisites)
@@ -15,8 +17,7 @@ You can download the official [vertica/kafka-scheduler](https://hub.docker.com/r
       - [Configuration file](#configuration-file)
       - [Scheduler components](#scheduler-components)
       - [Create a scheduler](#create-a-scheduler)
-    - [Launching a scheduler](#launching-a-scheduler)
-    - [Building a custom scheduler container](#building-a-custom-scheduler-container)
+    - [Launching a scheduler](#launch-a-scheduler) - [Building a custom scheduler container](#building-a-custom-scheduler-container)
       - [Prerequisites](#prerequisites-1)
       - [`build` make target](#build-make-target)
     - [Push to Docker Hub](#push-to-docker-hub)
@@ -46,7 +47,7 @@ $ cd vertica-kafka-scheduler
 
 ### Configure a scheduler 
 
-A scheduler is composed of [individual components](#scheduler-components) that define the load frequency, data type, and Vertica and Kafka environments. After you define properties for each component, [launch the scheduler](#launching-the-scheduler) with configuration and logging utilities mounted as volumes.
+A scheduler is composed of [individual components](#scheduler-components) that define the load frequency, data type, and Vertica and Kafka environments. After you define properties for each component, [launch the scheduler](#launch-a-scheduler) with configuration and logging utilities mounted as volumes.
 
 #### Configuration file
 
@@ -137,7 +138,7 @@ vkconfig microbatch --add \
 ...
 ```
 
-### Launching a scheduler
+### Launch a scheduler
 
 After you [create a scheduler](#create-a-scheduler), launch the scheduler to begin scheduling microbatches. To launch a scheduler, execute a `docker run` command that does the following:
 - Mounts a configuration file as a volume.
@@ -168,7 +169,7 @@ In some circumstances, you might want to build a custom vertica/kafka-scheduler 
 - Vertica binary or rpm2cpio vertica.rpm | cpio -idmv and export VERTICA_INSTALL=./opt/vertica
 - Java libraries located in `/vertica/java`.
 
-For additional information about Vertica and Java development, see [Java SDK](https://www.vertica.com/docs/latest/HTML/Content/Authoring/ExtendingVertica/Java/DevelopingInJava.htm).
+For additional information about Vertica and Java development, see [Java SDK](https://www.vertica.com/docs/latest/HTML/Content/Authoring/ExtendingVertica/Java/DevelopingInJava.htm) in the Vertica documentation.
 
 #### `build` make target
 
