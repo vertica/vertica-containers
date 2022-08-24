@@ -26,10 +26,9 @@ The UDx-container directory packages in a container the following resources requ
 
 ## [Kafka Scheduler](vertica-kafka-scheduler)
 
-The [kafka-scheduler](https://hub.docker.com/repository/docker/vertica/kafka-scheduler) container runs the [Kafka Scheduler](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/AutomaticallyCopyingDataFromKafka.htm), a standalone Java application that automatically consumes data from one or more Kafka topics and loads structured data into Vertica.
+The kafka-scheduler directory provides tools to maintain a the official [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) container, or build a custom containerized version of the [Vertica Kafka Scheduler](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/AutomaticallyCopyingDataFromKafka.htm), a standalone Java application that automatically consumes data from one or more Kafka topics and then loads the structured data into Vertica.
 
-
-The Kafka Scheduler provides the following advantages over manual data loads with COPY:
-- The streamed data automatically appears in your database according to the [frame duration](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/ChoosingFrameDuration.htm).
+The Kafka Scheduler provides the following advantages over manually loading data with COPY statements:
+- Streamed data automatically loads in your database according to the [frame duration](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/ChoosingFrameDuration.htm).
 - The Kafka Scheduler manages offsets to ensure an exactly-once message consumption process from Kafka topics.
 - You can configure backup schedulers to provide high-availability. If the primary scheduler fails, the backup scheduler begins loading Kafka data where the failed scheduler left off.
