@@ -88,7 +88,7 @@ For in-depth details, see [Launch a scheduler](#launch-a-scheduler).
 
 ### Scheduler demo
 
-This repository contains `example.sh`, a demonstration of a running scheduler. It creates a complete Vertica/Kafka environment, automatically loads JSON-formatted test data into a Flex table, logs each action to the console, and then removes any build artifacts. To run the demo, use the following command: 
+This repository contains `example.sh`, a demonstration of a running scheduler. It uses containers and Docker Compose to create a complete Vertica/Kafka environment, automatically loads JSON-formatted test data into a Flex table, logs each action to the console, and then removes any build artifacts. To run the demo, use the following command: 
 
 ```bash 
 $ make test
