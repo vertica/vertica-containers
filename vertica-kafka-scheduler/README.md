@@ -30,7 +30,7 @@ For in-depth details about streaming data with Vertica and Apache Kafka, see [Ap
     - [Building a custom scheduler container](#building-a-custom-scheduler-container)
       - [Prerequisites](#prerequisites-1)
       - [`build` make target](#build-make-target)
-    - [Push to Docker Hub](#push-to-docker-hub)
+      - [Push to Docker Hub](#push-to-docker-hub)
 
 ## Prerequisites
 
@@ -69,7 +69,7 @@ To view runtime statistics on the scheduler, enter the following:
 $ docker run vertica/kafka-scheduler vkconfig statistics --help
 ```
 
-For in-depth details, see [Configuring a scheduler](#configure-a-scheduler).
+For in-depth details, see [Configuring a scheduler](#configure-a-scheduler-1).
 
 ### Launch a scheduler
 
@@ -84,7 +84,7 @@ $ docker run -it \
         vkconfig launch --conf /etc/vkconfig.conf &
 ```
 
-For in-depth details, see [Launch a scheduler](#launch-a-scheduler).
+For in-depth details, see [Launch a scheduler](#launch-a-scheduler-1).
 
 ### Scheduler demo
 
@@ -294,7 +294,7 @@ $ make build VERTICA_INSTALL=/path/to/vertica
 
 In addition to the build target and variables, the Makefile provides the `make java` and `make kafka` targets so that extract Java and Kafka installation files from your local Vertica installation. For details, see [Makefile](#makefile).
 
-### Push to Docker Hub
+#### Push to Docker Hub
 
 The Makefile has a `push` target that builds and pushes your custom scheduler container to [Docker Hub](https://hub.docker.com/):
 
