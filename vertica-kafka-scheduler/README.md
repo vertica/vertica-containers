@@ -73,7 +73,7 @@ For in-depth details, see [Configuring a scheduler](#configure-a-scheduler).
 
 ### Launch a scheduler
 
-To launch a scheduler, execute the following command from the top-level of this repository:
+To launch a scheduler, execute the following command from the `/vertica-kafka-scheduler` directory:
 
 ```bash
 $ docker run -it \
@@ -105,8 +105,8 @@ This repository contains the following utilities to help maintain and build a Ve
 The Makefile contains the following targets:
 - `make help`: Displays the help for the Makefile.
 - `make version`: Displays the Vertica version that will be used in the build process.
-- `make java`: Copy the local install of the Java libraries from `/opt/vertica/java` and saves them in a `/java` directory in the top-level of this repository.
-- `make kafka`: Copy the local install of the Kafka Scheduler from `/opt/vertica/packages/kafka` and saves them in a `/kafka` directory in the top-level of this repository.
+- `make java`: Copy the local install of the Java libraries from `/opt/vertica/java` and saves them in a `/java` directory in the `/vertica-kafka-scheduler` directory.
+- `make kafka`: Copy the local install of the Kafka Scheduler from `/opt/vertica/packages/kafka` and saves them in a `/kafka` directory in the `/vertica-kafka-scheduler` directory.
 - `make build`: Builds the container image.
 - `make push`: Pushes the custom container image to the remote Docker Hub repository.
 - `make test`: Runs [example.sh](#examplesh) to validate the vkconfig configuration.
