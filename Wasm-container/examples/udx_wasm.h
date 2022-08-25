@@ -2,6 +2,8 @@
 #define udx_wasm_h
 #include <stdbool.h>
 
+const char* udx_query_wasm_config();
+
 void* udx_get_wasm_state();
 
 bool udx_setup(const char* filename,

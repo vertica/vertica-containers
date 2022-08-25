@@ -57,6 +57,9 @@ int main(const int argc, const char* argv[]) {
     populate(a_data, sizeof(a_data)/sizeof(a_data[0]));
     populate(b_data, sizeof(b_data)/sizeof(b_data[0]));
 
+    // I've learned about wasm_config.  Does it help?
+    std::cout << "Wasm engine configuration: " << udx_query_wasm_config() << std::endl << std::flush;
+
     // direct time
     auto start = std::chrono::high_resolution_clock::now();
     for(int i = 0; i < ARRAY_SIZE; ++i) {
@@ -128,7 +131,7 @@ int main(const int argc, const char* argv[]) {
         }
         stop = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-        std::cout << "Rustasm time: " << duration.count() << std::endl << std::flush;
+        std::cout << "Rustwasm time: " << duration.count() << std::endl << std::flush;
         // This stuff actually did something, right?
         check_results(direct_result,
                       rust_result,

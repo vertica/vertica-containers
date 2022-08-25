@@ -14,6 +14,8 @@
 #define EBUF_SIZE 256
 static char ebuf[EBUF_SIZE+1];
 
+// Having this static simplifies the C interface, but complicates things
+// if you want to have more than one Wasm function in your program
 static struct wasm_state {
     wasm_byte_vec_t wasm;
     wasm_engine_t* engine;
@@ -112,6 +114,30 @@ static void initialize_wasm_state(struct wasm_state *ws) {
     ws->func = NULL;
 }
 
+const char* udx_query_wasm_config() {
+    // I've learned about config --- does that help?
+
+    wasm_config_t* config = wasm_config_new();
+
+    // Use the Cranelift compiler, if available.
+    /* if (wasmer_is_compiler_available(CRANELIFT)) { */
+    /*     wasm_config_set_compiler(config, CRANELIFT); */
+    /*     return "CRANELIFT"; */
+    /* } */
+    /* // Or maybe LLVM? */
+    /* if (wasmer_is_compiler_available(LLVM)) { */
+    /*     wasm_config_set_compiler(config, LLVM); */
+    /*     return "LLVM"; */
+    /* } */
+    // Or maybe Singlepass?
+    if (wasmer_is_compiler_available(SINGLEPASS)) {
+        wasm_config_set_compiler(config, SINGLEPASS);
+        return "SINGLEPASS";
+    }
+    return "Unknown";
+}
+
+
 void* udx_get_wasm_state() {
     zero_wasm_state(&STATIC_WASM_STATE);
     initialize_wasm_state(&STATIC_WASM_STATE);
@@ -123,7 +149,10 @@ void udx_cleanup(void* v_ws) {
     initialize_wasm_state(ws);
 }
 
-bool udx_setup(const char* filename, void *v_ws, const char* func_name, char** error_str) {
+bool udx_setup(const char* filename,
+               void *v_ws,
+               const char* func_name,
+               char** error_str) {
     struct wasm_state* ws = (struct wasm_state*) v_ws;
     zero_wasm_state(ws);
 

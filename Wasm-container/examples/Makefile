@@ -58,3 +58,9 @@ comparison: comparison.o udx_wasm.o libudx_wasm.so
 
 run_comparison: comparison sum.c.wasm sum.rs.wasm 
 	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.:$(WASM_LIBDIR) ./comparison
+
+profile_comparison:
+	gcc $(CFLAGS) -c -pg -fpic -Werror udx_wasm.c -I ${WASM_INCLUDE} 
+	g++ -g -pg comparison.cpp udx_wasm.o ${WASM_LIBS} -o comparison_pg
+	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.:$(WASM_LIBDIR) ./comparison_pg
+	gprof comparison_pg gmon.out > comparison.profile
