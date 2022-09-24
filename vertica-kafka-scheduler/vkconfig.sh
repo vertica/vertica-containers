@@ -4,7 +4,7 @@
 # This script file wraps a containerized vkconfig.
 # Requires readlink but tries to make due without.
 
-: ${VERSION:=$(awk 'match($1, /Version=(.*)/) { print substr($1, RSTART+8, RLENGTH-8) }' /opt/vertica/packages/kafka/package.conf 2>/dev/null || echo latest)}
+: ${VERTICA_VERSION:=$(perl -nE 'my $v=$1 if m/Version\s*=\s*"v([\d\.]*)-/; END { say $v||"latest" }' /opt/vertica/sdk/BuildInfo.java 2>/dev/null) || echo "latest"}
 
 if ! SCRIPT_DIR=$(readlink -f ${BASH_SOURCE[0]} 2>/dev/null); then SCRIPT_DIR=${BASH_SOURCE[0]}; fi
 SCHED_DIR=${SCRIPT_DIR%/*/*} # take out /bin/vkconfig
@@ -75,5 +75,5 @@ dockeropts+=( -v "$PWD/log:/opt/vertica/log" )
 
 exec docker run -i "${dockeropts[@]}" \
     --user $(perl -E '@s=stat "'"$LOG_DIR"'"; say "$s[4]:$s[5]"') \
-        vertica/kafka-scheduler:$VERSION vkconfig "${vkconfigopts[@]}"
+        vertica/kafka-scheduler:$VERTICA_VERSION vkconfig "${vkconfigopts[@]}"
 
