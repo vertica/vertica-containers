@@ -248,8 +248,8 @@ vkconfig microbatch --add \
 After you [create a scheduler](#create-a-scheduler), launch the scheduler to begin scheduling microbatches. To launch a scheduler, execute a `docker run` command that does the following:
 - Mounts a configuration file as a volume.
 - Specifies the scheduler image name.
-- Mounts the `vkafka-log-config-debug.xml` file in the current directory into the container's `/opt/vertica/packages/kafka/config` directory. This file configures log messages to help troubleshoot scheduler issues.
-- Mounts `log` in the current directory into the container as the `/opt/vertica/log` directory. This writes log messages to the local `log` directory.
+- Mounts `vkafka-log-config-debug.xml` in the current directory into the container's `/opt/vertica/packages/kafka/config` directory. This file configures log messages to help troubleshoot scheduler issues.
+- Mounts `log` in the current directory into the container's `/opt/vertica/log` directory. This allows log messages to be written to the local `log` directory, assuming that `vkafka-log-config-debug.xml` configures log output in `/opt/vertica/log`.
 - Passes the Docker `--user` command to specify the UID that has write access on the `/log` directory.
 
 The following command provides an example format. Execute this command from the top-level directory of your cloned repository:
