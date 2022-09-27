@@ -2,7 +2,7 @@
 
 This repository provides the tools to build and maintain a containerized version of the [Vertica Kafka Scheduler](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/AutomaticallyCopyingDataFromKafka.htm), a standalone Java application that automatically consumes data from one or more Kafka topics and then loads the structured data into Vertica. The scheduler is controlled by the `vkconfig` command line script.
 
-You can download the pre-built [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) image, or you can use the Dockerfile in this repo to build the image locally. The pre-built image is based on [alpine:3.14](https://hub.docker.com/_/alpine) and includes the [openjdk8-jre](https://hub.docker.com/_/openjdk).
+You can download the pre-built [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) image, or you can use the Dockerfile in this repo to build the image locally. The image is based on [alpine:3.14](https://hub.docker.com/_/alpine) and includes the [openjdk8-jre](https://hub.docker.com/_/openjdk).
 
 
 For in-depth details about streaming data with Vertica and Apache Kafka, see [Apache Kafka Integration](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/KafkaIntegrationGuide.htm) in the Vertica documentation.
@@ -248,8 +248,8 @@ vkconfig microbatch --add \
 After you [create a scheduler](#create-a-scheduler), launch the scheduler to begin scheduling microbatches. To launch a scheduler, execute a `docker run` command that does the following:
 - Mounts a configuration file as a volume.
 - Specifies the scheduler image name.
-- Mounts `vkafka-log-config-debug.xml` from the current directory file in the container's `/opt/vertica/packages/kafka/config` directory. This file configures log messages to help troubleshoot scheduler issues.
-- Mounts `/log` from the current directory into the container's `/opt/vertica/log` directory so that log messages are written to the local `/log` directory.
+- Mounts the `vkafka-log-config-debug.xml` file in the current directory into the container's `/opt/vertica/packages/kafka/config` directory. This file configures log messages to help troubleshoot scheduler issues.
+- Mounts `log` in the current directory into the container as the `/opt/vertica/log` directory. This writes log messages to the local `log` directory.
 - Passes the Docker `--user` command to specify the UID that has write access on the `/log` directory.
 
 The following command provides an example format. Execute this command from the top-level directory of your cloned repository:
