@@ -1,9 +1,8 @@
 # Vertica-Kafka Scheduler
 
-
 This repository provides the tools to build and maintain a containerized version of the [Vertica Kafka Scheduler](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/AutomaticallyCopyingDataFromKafka.htm), a standalone Java application that automatically consumes data from one or more Kafka topics and then loads the structured data into Vertica. The scheduler is controlled by the `vkconfig` command line script.
 
-You can download the official [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) image, or you can use the Dockerfile in this repo to build a custom image. The official image is based on [alpine:3.14](https://hub.docker.com/_/alpine) and includes the [openjdk8-jre](https://hub.docker.com/_/openjdk).
+You can download the pre-built [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) image, or you can use the Dockerfile in this repo to build the image locally. The pre-built image is based on [alpine:3.14](https://hub.docker.com/_/alpine) and includes the [openjdk8-jre](https://hub.docker.com/_/openjdk).
 
 
 For in-depth details about streaming data with Vertica and Apache Kafka, see [Apache Kafka Integration](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/KafkaIntegrationGuide.htm) in the Vertica documentation.
@@ -166,7 +165,7 @@ Each component and the running scheduler process require access to the same data
 The components and running scheduler process access configuration file values from within the scheduler container filesystem, so you must mount the configuration file as a [volume](https://docs.docker.com/storage/volumes/). The scheduler expects the configuration file to be named `vkconfig.conf` and stored in the `/etc` directory. For example: 
 
 ```bash
-$ docker run -v <local-config.conf>:/etc/vkconfig.conf vertica/kafka-scheduler <options> ...
+$ docker run -v <local-config.conf>:/etc/vkconfig.conf vertica/kafka-scheduler vkconfig <component> --conf /etc/vkconfig.conf <options>
 ```
 
 For a sample configuration file, see [example.conf](example.conf) in this repository.
@@ -249,9 +248,9 @@ vkconfig microbatch --add \
 After you [create a scheduler](#create-a-scheduler), launch the scheduler to begin scheduling microbatches. To launch a scheduler, execute a `docker run` command that does the following:
 - Mounts a configuration file as a volume.
 - Specifies the scheduler image name.
-- Mounts the local `vkafka-log-config-debug.xml` file in the container's `/opt/vertica/packages/kafka/config` directory. This file configures log messages to help troubleshoot scheduler issues.
-- Mounts the local `/log` directory in the container's `/opt/vertica/log` directory to write logs to help troubleshoot scheduler issues.
-- Passes the Docker `--user` command to specify the user.
+- Mounts `vkafka-log-config-debug.xml` from the current directory file in the container's `/opt/vertica/packages/kafka/config` directory. This file configures log messages to help troubleshoot scheduler issues.
+- Mounts `/log` from the current directory into the container's `/opt/vertica/log` directory so that log messages are written to the local `/log` directory.
+- Passes the Docker `--user` command to specify the UID that has write access on the `/log` directory.
 
 The following command provides an example format. Execute this command from the top-level directory of your cloned repository:
 
@@ -284,7 +283,7 @@ Use the `build` target to create a custom container. Depending on your Vertica e
 | Variable        | Description |
 |:----------------|:------------|
 | VERTICA_INSTALL | The location of your Vertica binary installation. Define this variable if you want to copy the local install of the Java libraries.<br>**Default**: `/opt/vertica` |
-| VERTICA_VERSION | The Vertica version that you want to use to build the scheduler container. The scheduler version must match the Vertica database version. <br>**Default**: `latest` |
+| VERTICA_VERSION | The Vertica version that you want to use to build the scheduler container. The scheduler version must match the Vertica database version. <br>**Default**: The version of the Vertica binary that VERTICA_INSTALL points to. |
 
 For example, if you installed Vertica in a custom directory, use the following command:
 
