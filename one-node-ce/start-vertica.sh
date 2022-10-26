@@ -21,6 +21,7 @@ IMAGE_NAME=vertica-ce
 TAG=latest
 CONTAINER_NAME=vertica_ce
 DVOL=vertica-data 
+VERTICA_PORT=5433
 
 function usage_exit() {
     cat <<EOF
@@ -30,6 +31,7 @@ Options are:
  -d - directory-for-cid.txt (default is the current directory)
  -h - show help
  -i image - specify image name (default is $IMAGE_NAME)
+ -p port - specify a port number to use for vsql to talk to vertica
  -t tag - specify the image tag (default is $TAG)
  -v hostpath:containerdir - mount hostpath as containerdir in the 
         container (in addition to the data docker volume)
@@ -38,7 +40,7 @@ EOF
     exit $1
 }
 
-while getopts "c:d:hi:r:t:v:V:" opt; do
+while getopts "c:d:hi:p:r:t:v:V:" opt; do
     case "$opt" in
         c) CONTAINER_NAME="${OPTARG}"
            ;;
@@ -47,6 +49,8 @@ while getopts "c:d:hi:r:t:v:V:" opt; do
         h) usage_exit 0
            ;;
         i) IMAGE_NAME=${OPTARG}
+           ;;
+        p) VERTICA_PORT=${OPTARG}
            ;;
         t) TAG="${OPTARG}"
            ;;
@@ -61,10 +65,11 @@ while getopts "c:d:hi:r:t:v:V:" opt; do
     esac
 done
 
+AGENT_PORT=$(($VERTICA_PORT + 11))
 CID_FILE=$CID_TXT_DIR/cid.txt
 
 echo "Starting container..."
-CID=`docker run -p 5433:5433 -p 5444:5444 -d $VFLAG --mount type=volume,source=$DVOL,target=/data --name $CONTAINER_NAME $IMAGE_NAME:$TAG`
+CID=`docker run -p $VERTICA_PORT:5433 -p $AGENT_PORT:5444 -d $VFLAG --mount type=volume,source=$DVOL,target=/data --name $CONTAINER_NAME $IMAGE_NAME:$TAG`
 echo
 
 echo "Container ID: $CID"

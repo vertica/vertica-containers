@@ -21,6 +21,9 @@ TAG=latest
 ERROR_COUNT=0
 KEEP_CONTAINER=discard
 
+# so we can run even if there's a running container
+VERTICA_PORT=$(( ( $RANDOM % 64000 ) + 1024))
+
 # translate "true" and "false" into exit status
 TRUE_EXIT=0
 FALSE_EXIT=1
@@ -78,7 +81,7 @@ function wait_for_container_to_start() {
 }
 
 function canary() {
-    if vsql -U dbadmin -A -t -c 'select 1' > /dev/null; then
+    if vsql -p $VERTICA_PORT -U dbadmin -A -t -c 'select 1' > /dev/null; then
         return $TRUE_EXIT
     else
         inc_ERROR_COUNT
@@ -88,7 +91,7 @@ function canary() {
 
 function flextable_library_loaded() {
     # verify that (at least one of) the optional libraries got loaded
-    if [ `vsql -U dbadmin -f tests/flex_table_loaded.sql -t` == t ]; then
+    if [ `vsql  -p $VERTICA_PORT -U dbadmin -f tests/flex_table_loaded.sql -t` == t ]; then
         echo Container vertica loaded the flextable library successfully
         return $TRUE_EXIT
     else
@@ -103,7 +106,7 @@ EOF
 
 # Called with table name suffix
 function load_table() {
-    (vsql -U dbadmin -q -t <<EOF
+    (vsql  -p $VERTICA_PORT -U dbadmin -q -t <<EOF
 drop table if exists t_$1;
 create table t_$1 (a int, b int) ;
 insert into t_$1 (a, b) values (3, 1);
@@ -119,7 +122,7 @@ EOF
 
 # Called with table name suffix
 function table_is_still_there() {
-    if [ `vsql -U dbadmin -t -c "select count(*) from t_$1"` == 6 ]; then
+    if [ `vsql  -p $VERTICA_PORT -U dbadmin -t -c "select count(*) from t_$1"` == 6 ]; then
         echo Table t_$1 is loaded into Vertica
         return $TRUE_EXIT
     else
@@ -151,13 +154,13 @@ function stop_and_remove_container() {
 
 function start_container() {
     # verify that the Vertica server is up and runnign
-    if ./start-vertica.sh -c ${CONTAINER_NAME} -i ${IMAGE_NAME} -t ${TAG} -V ${VOLUME_NAME} ; then
+    if ./start-vertica.sh -c ${CONTAINER_NAME} -i ${IMAGE_NAME} -p ${VERTICA_PORT} -t ${TAG} -V ${VOLUME_NAME} ; then
         wait_for_container_to_start ${CONTAINER_NAME}
         return $TRUE_EXIT
     else
         # hopefully start-vertica printed a useful error message
         cat <<EOF
-$0: ERROR: Cannot start-vertica -c ${CONTAINER_NAME} -i ${IMAGE_NAME} -t ${TAG} -V ${VOLUMEN_NAME}
+$0: ERROR: Cannot start-vertica -c ${CONTAINER_NAME} -i ${IMAGE_NAME} -p ${VERTICA_PORT} -t ${TAG} -V ${VOLUMEN_NAME}
 EOF
         inc_ERROR_COUNT
         return $FALSE_EXIT
