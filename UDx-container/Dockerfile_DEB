@@ -36,6 +36,9 @@ ARG dbadmin_id=1000
 ARG DEB
 ARG vertica_version
 
+ENV VERTICA_HOME_DIR="/home/$vertica_db_user"
+
+
 COPY $DEB /tmp/$DEB
 COPY ./tools/cleanup.sh /tmp/
 COPY ./tools/package-checksum-patcher.py /tmp/
@@ -97,7 +100,8 @@ RUN set -x \
                       -U
 
 RUN chown -R $vertica_db_user:$vertica_db_group $VERTICA_OPT_DIR \
-    && chown -R $vertica_db_user:$vertica_db_group /home/$vertica_db_user
+    && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
+    && chmod 755 ${VERTICA_HOME_DIR}             
 
 # docker daemons versions < 19.03 don't preserve ownership on COPY --from
 # but doing the chown -R in the second half is costly in terms of
@@ -209,7 +213,8 @@ RUN set -x \
      # docker daemons versions < 19.03 don't preserve ownership on COPY --from
      # so we have to chown these things again
      && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_DATA_DIR} \
-     && chown -R $vertica_db_user:$vertica_db_group /home/$vertica_db_user \
+     && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
+     && chmod 755 ${VERTICA_HOME_DIR} \
      # but this chown is expensive in image-size, so we use aother
      # trick in the first half of the build 
      # && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \

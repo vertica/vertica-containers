@@ -28,6 +28,8 @@ ARG vertica_db_group="verticadba"
 ARG dbadmin_gid=1000
 ARG dbadmin_id=1000
 
+ENV VERTICA_HOME_DIR="/home/$vertica_db_user"
+
 # name of .rpm file
 ARG RPM
 ARG vertica_version
@@ -115,7 +117,8 @@ RUN mkdir -p ${VERTICA_DATA_DIR} \
 COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
 
 RUN chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \
-    && chown -R $vertica_db_user:$vertica_db_group /home/$vertica_db_user
+    && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
+    && chmod 755 ${VERTICA_HOME_DIR}
 
 # docker daemons versions < 19.03 don't preserve ownership on COPY --from
 # but doing the chown -R in the second half is costly in terms of
@@ -251,7 +254,8 @@ RUN set -x \
      # docker daemons versions < 19.03 don't preserve ownership on COPY --from
      # so we have to chown these things again
      && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_DATA_DIR} \
-         && chown -R $vertica_db_user:$vertica_db_group /home/$vertica_db_user \
+         && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
+         && chmod 755 ${VERTICA_HOME_DIR} \
      # but this chown is expensive in image-size, so we use aother
      # trick in the first half of the build 
      # && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \
