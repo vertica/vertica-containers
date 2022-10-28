@@ -24,6 +24,7 @@ Vertica provides a Dockerfile for different distributions so that you can create
 Vertica tests the following versions, but the contents of this repository might work with eariler versions:
 - 10.x
 - 11.x
+- 12.x
 
 ## CentOS
 - 7.9
@@ -52,7 +53,7 @@ You can include build variables in the build process to customize the container.
 |---------------------------|------------|
 | OSTAG | The container operating system distribution, either `centos` or `ubuntu`. This variable is required to build a container that runs an OS that is different from the host OS. |
 | PACKAGE | When there is more than one Vertica RPM or DEB file in the top-level directory, this variable specifies which file to use in the build process. |
-| TARGET | Required. The file type (RPM or DEB) of the Vertica binary that you use in the build process. |
+| TARGET | Required. The file type (`rpm` or `deb`) of the Vertica binary that you use in the build process. |
 | VERTICA_VERSION | The version number of the Vertica binary used in the build process. This value is optional for a [canonically-named Vertica binary](#building-with-a-canonically-named-vertica-binary).<br> You can use this variable to build containers for different Vertica versions. |
 
 For example, you might build multiple containers to develop UDxs for multiple Vertica versions. To help distinguish between containers, define `OSTAG` and `VERTICA_VERSION` in the build command. If you set `OSTAG=centos` and `VERTICA_VERSION=11.0.0-0`, the full container specification is `verticasdk:centos-11.0.0-0`.
@@ -94,7 +95,8 @@ This repository provides `vsdk-*` scripts to help you test and compile your UDx 
 | vsdk-g++ | Executes the g++ compiler in the UDx container. |
 | vsdk-make | Executes `make` in the current working directory in the UDx container. This allows you to develop UDxs locally and compile them with the tools available in the UDx container. |
 
-`vsdk-make` is the script that you will use the most often. It behaves exactly like `make`, but it compiles your files in the development environment mounted in the UDx container.
+`vsdk-make` is the script that you will probably
+use the most often. It behaves exactly like `make`, but it compiles your files in the development environment mounted in the UDx container.
 
 These scripts use the contents of `/etc/os-release` to determine whether the container has a `centos` or `ubuntu` tag. If your host uses a different distribution than your development environment, you can edit `vsdk-bash` directly to change the default setting. Alternatively, you can change the default interactively by defining the OSTAG [environment variable](#environment-variables) when you execute `vsdk-make`:
 
