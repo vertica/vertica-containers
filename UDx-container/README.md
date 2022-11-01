@@ -181,11 +181,45 @@ The UDx container itself is not writable, so it creates and mounts a Docker volu
 
 ## Fetching the test Vertica server startup log
 
-`vsdk-vertica` launches a server that runs in the background in a container named `verticasdk`.  You can read the container log using the `docker logs` command:
+`vsdk-vertica` launches a server that runs in the background in a container named `verticasdk`.
+
+The command, when run, outputs the following message:
+
+```shell
+./vsdk-vertica
+Starting container...
+
+Run
+      docker logs verticasdk
+to view startup progress
+
+Don't stop container until above command prints 'Vertica is now running'
+To stop:
+    docker stop verticasdk
+
+When executing outside of a VWasm container, you can connect to this vertica
+using
+    vsql -p 11233
+
+If executing inside a VWasm container (where you did your Wasm development),
+just 'vsql' should suffice
+```
+
+As noted, you can read the container log using the `docker logs` command:
 
 ```shell
 docker logs verticasdk
 ```
+
+But also note the instructions for running vsql to talk to the Vertica in the vsdk-container:
+
+```shell
+When executing outside of a VSDK container, you can connect to this vertica
+using
+    vsql -p 11233 -U dbadmin
+```
+
+Outside the VSDK container the Vertica port is mapped to a non-standard port (in this case, `11233`).  The `-U dbadmin` connects to Vertica as the dbadmin user.  The database does not yet have any other users defined.  The dbadmin user has a blank password in this container's database, and has permission to manipulate UDx libraries in the container's database.
 
 ## Stopping and removing the test Vertica server
 

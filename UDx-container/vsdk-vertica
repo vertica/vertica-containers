@@ -159,9 +159,9 @@ then
     echo "To stop:"
     echo "    docker stop $CONTAINER_NAME"
     echo
-    echo "When executing outside of a VWasm container, you can connect to this vertica"
+    echo "When executing outside of a VSDK container, you can connect to this vertica"
     echo "using"
-    echo "    vsql -p $(( PORTOFFSET + 5433 ))"
+    echo "    vsql -p $(( PORTOFFSET + 5433 ))" -U dbadmin
     echo
     echo "If executing inside a VWasm container (where you did your Wasm development),"
     echo "just 'vsql' should suffice"
