@@ -178,6 +178,7 @@ In addition to the tools such as `vsdk-make` and `vsdk-g++`, there is a `vsdk-ve
 
 The UDx container itself is not writable, so it creates and mounts a Docker volume called `verticasdk-data`. It also mounts the current working directory and your home directory in the container using the same names those directories have on the host machine. In addition, `vsdk-vertica` understands the `VSDK_MOUNT` and `VSDK_ENV` environment variables described in [environment variables](#environment-variables).
 
+
 ## Fetching the test Vertica server startup log
 
 `vsdk-vertica` launches a server that runs in the background in a container named `verticasdk`.  You can read the container log using the `docker logs` command:

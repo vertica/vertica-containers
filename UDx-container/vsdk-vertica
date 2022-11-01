@@ -127,8 +127,10 @@ while getopts "c:d:hi:r:t:v:V:" opt; do
 done
 CURDIR=`/bin/pwd`
 
+PORTOFFSET=$(( RANDOM % 10000 ))
+
 echo "Starting container..."
-docker run \
+if docker run \
        --security-opt=seccomp:unconfined \
        --privileged \
        -e PATH=$CONTAINER_PATH \
@@ -139,21 +141,28 @@ docker run \
        $VSDK_VOLUMES \
        $VSDK_ENV_FILE_OPTION \
        --mount type=volume,source=$DVOL,target=/data \
-       -p 5433:5433 \
-       -p 5444:5444 \
+       -p $(( PORTOFFSET + 5433 )):5433 \
+       -p $(( PORTOFFSET + 5444 )):5444 \
        -d \
        $VFLAG \
        --name $CONTAINER_NAME \
        $IMAGE_NAME:$TAG \
        ${CURDIR} \
        vertica
-echo
-
-echo
-echo "Run"
-echo "      docker logs $CONTAINER_NAME"
-echo "to view startup progress"
-echo
-echo "Don't stop container until above command prints 'Vertica is now running'"
-echo "To stop:"
-echo "    docker stop $CONTAINER_NAME"
+then
+    echo
+    echo "Run"
+    echo "      docker logs $CONTAINER_NAME"
+    echo "to view startup progress"
+    echo
+    echo "Don't stop container until above command prints 'Vertica is now running'"
+    echo "To stop:"
+    echo "    docker stop $CONTAINER_NAME"
+    echo
+    echo "When executing outside of a VWasm container, you can connect to this vertica"
+    echo "using"
+    echo "    vsql -p $(( PORTOFFSET + 5433 ))"
+    echo
+    echo "If executing inside a VWasm container (where you did your Wasm development),"
+    echo "just 'vsql' should suffice"
+fi
