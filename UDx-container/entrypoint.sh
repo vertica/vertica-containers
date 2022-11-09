@@ -104,10 +104,13 @@ function start_vertica() {
     # recreate that symlink
     preserve_config
     echo 'Starting Database'
-    ${ADMINTOOLS} -t start_db \
+    if ${ADMINTOOLS} -t start_db \
                   --database=$VERTICA_DB_NAME \
-                  --noprompts
-
+                  --noprompts; then
+        echo "Vertica is now running"
+    else
+        echo "Admintools was unable to start Vertica"
+    fi
 }
 
 # A container that runs Vertica hangs around until Vertica exits ---
@@ -122,8 +125,7 @@ case $vsdk_cmd in
         trap "shut_down" SIGKILL SIGTERM SIGHUP SIGINT
         initialize_vertica_directories
         start_vertica
-        echo "Vertica is now running"
-        
+       
         while [ "${STOP_LOOP}" == "false" ]; do
             # We could use admintools -t show_active_db to see if the
             # db is still running, and restart it if it isn't

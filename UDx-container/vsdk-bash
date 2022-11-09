@@ -30,7 +30,7 @@
 #       /etc/os-release).
 # VERTICA_VERSION: something like 11.0.0-0
 #
-# In addition, there is these environment variables:
+# In addition, there are these environment variables:
 #
 # VSDK_MOUNT: an optional space-separated list of host directories to
 #       mount in the UDx container --- that is, "I'm going to want to
@@ -118,7 +118,23 @@ if [ "$VSDK_ENV"x != x ]; then
     VSDK_ENV_FILE_OPTION="--env-file $VSDK_ENV"
 fi
 
-user_id=`id -u`
+# sometimes it's useful to run vsdk-bash (especially) as dbadmin
+# e.g., to look at the vertica.log in the catalog directory
+case "$VSDK_USER"x in
+x)
+    user_id=`id -u`
+    ;;
+dbadminx)
+    user_id=1000
+    ;;
+*)
+    echo The only accepted VSDK_USER is dbadmin
+    echo "(the system defaults to yourself, otherwise)"
+    exit 1
+    ;;
+esac
+
+
 HOSTNAME=vsdk-$USER
 
 #         --env LD_LIBRARY_PATH=/opt/vertica/lib 

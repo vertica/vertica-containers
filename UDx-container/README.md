@@ -24,6 +24,7 @@ Vertica provides a Dockerfile for different distributions so that you can create
 Vertica tests the following versions, but the contents of this repository might work with eariler versions:
 - 10.x
 - 11.x
+- 12.x
 
 ## CentOS
 - 7.9
@@ -52,7 +53,7 @@ You can include build variables in the build process to customize the container.
 |---------------------------|------------|
 | OSTAG | The container operating system distribution, either `centos` or `ubuntu`. This variable is required to build a container that runs an OS that is different from the host OS. |
 | PACKAGE | When there is more than one Vertica RPM or DEB file in the top-level directory, this variable specifies which file to use in the build process. |
-| TARGET | Required. The file type (RPM or DEB) of the Vertica binary that you use in the build process. |
+| TARGET | Required. The file type (`rpm` or `deb`) of the Vertica binary that you use in the build process. |
 | VERTICA_VERSION | The version number of the Vertica binary used in the build process. This value is optional for a [canonically-named Vertica binary](#building-with-a-canonically-named-vertica-binary).<br> You can use this variable to build containers for different Vertica versions. |
 
 For example, you might build multiple containers to develop UDxs for multiple Vertica versions. To help distinguish between containers, define `OSTAG` and `VERTICA_VERSION` in the build command. If you set `OSTAG=centos` and `VERTICA_VERSION=11.0.0-0`, the full container specification is `verticasdk:centos-11.0.0-0`.
@@ -94,7 +95,8 @@ This repository provides `vsdk-*` scripts to help you test and compile your UDx 
 | vsdk-g++ | Executes the g++ compiler in the UDx container. |
 | vsdk-make | Executes `make` in the current working directory in the UDx container. This allows you to develop UDxs locally and compile them with the tools available in the UDx container. |
 
-`vsdk-make` is the script that you will use the most often. It behaves exactly like `make`, but it compiles your files in the development environment mounted in the UDx container.
+`vsdk-make` is the script that you will probably
+use the most often. It behaves exactly like `make`, but it compiles your files in the development environment mounted in the UDx container.
 
 These scripts use the contents of `/etc/os-release` to determine whether the container has a `centos` or `ubuntu` tag. If your host uses a different distribution than your development environment, you can edit `vsdk-bash` directly to change the default setting. Alternatively, you can change the default interactively by defining the OSTAG [environment variable](#environment-variables) when you execute `vsdk-make`:
 
@@ -176,13 +178,48 @@ In addition to the tools such as `vsdk-make` and `vsdk-g++`, there is a `vsdk-ve
 
 The UDx container itself is not writable, so it creates and mounts a Docker volume called `verticasdk-data`. It also mounts the current working directory and your home directory in the container using the same names those directories have on the host machine. In addition, `vsdk-vertica` understands the `VSDK_MOUNT` and `VSDK_ENV` environment variables described in [environment variables](#environment-variables).
 
+
 ## Fetching the test Vertica server startup log
 
-`vsdk-vertica` launches a server that runs in the background in a container named `verticasdk`.  You can read the container log using the `docker logs` command:
+`vsdk-vertica` launches a server that runs in the background in a container named `verticasdk`.
+
+The command, when run, outputs the following message:
+
+```shell
+./vsdk-vertica
+Starting container...
+
+Run
+      docker logs verticasdk
+to view startup progress
+
+Don't stop container until above command prints 'Vertica is now running'
+To stop:
+    docker stop verticasdk
+
+When executing outside of a VWasm container, you can connect to this vertica
+using
+    vsql -p 11233
+
+If executing inside a VWasm container (where you did your Wasm development),
+just 'vsql' should suffice
+```
+
+As noted, you can read the container log using the `docker logs` command:
 
 ```shell
 docker logs verticasdk
 ```
+
+But also note the instructions for running vsql to talk to the Vertica in the vsdk-container:
+
+```shell
+When executing outside of a VSDK container, you can connect to this vertica
+using
+    vsql -p 11233 -U dbadmin
+```
+
+Outside the VSDK container the Vertica port is mapped to a non-standard port (in this case, `11233`).  The `-U dbadmin` connects to Vertica as the dbadmin user.  The database does not yet have any other users defined.  The dbadmin user has a blank password in this container's database, and has permission to manipulate UDx libraries in the container's database.
 
 ## Stopping and removing the test Vertica server
 
