@@ -244,6 +244,8 @@ RUN set -x \
         readline-devel \
         sudo \
         tar \
+        vim \
+        unixODBC-devel \
         && yum clean all \
         && rm -rf /var/cache/yum \
      # Allow passwordless sudo access from dbadmin
