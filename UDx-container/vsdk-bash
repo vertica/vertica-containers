@@ -134,6 +134,7 @@ for arg in "$@"; do
 done
 
 docker run \
+       --rm \
        $INTERACTIVE \
        -e PATH=$CONTAINER_PATH \
        -e vUID=$user_id \
