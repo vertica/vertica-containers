@@ -198,7 +198,6 @@ RUN set -x \
             ntp \
             openssl \
             procps \
-            sudo \
             sysstat \
             tar \
             vim \
