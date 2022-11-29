@@ -131,6 +131,7 @@ Options are:
  -d - directory-for-cid.txt (default is the current directory)
  -h - show help
  -i image - specify image name (default is vertica-ce)
+ -p port - specify a port number to use for vsql to talk to vertica
  -t tag - specify the image tag (default is latest)
  -v hostpath:containerdir - mount hostpath as containerdir in the 
         container (in addition to the data docker volume)

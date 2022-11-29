@@ -18,7 +18,7 @@
 # 	Description:
 #	Builds the UDx build container
 #
-#       Copy the .rpm or .deb package to this directory and then invoke 
+#       Copy the .rpm or .deb package to this directory and then invoke
 #		make TARGET=rpm
 #	or
 #		make TARGET=deb
@@ -34,7 +34,7 @@
 #       vertica_10.1.1-5_amd64.deb
 #       vertica_11.0.0-20210723_amd64.deb
 #
-# (but have, say, something like this): 
+# (but have, say, something like this):
 #
 #	vertica.rpm
 #	vertica.deb
@@ -51,7 +51,7 @@
 #	who wish to use CentOS8)
 # PACKAGE specifies the name of the RPM or DEB file
 # TARGET is one of {deb, rpm} specifying the kind of package one is
-#	building from 
+#	building from
 # VERTICA_VERSION will be used for the image tag, and is extracted
 #	from the PACKAGE filename, if it is available there
 
@@ -66,6 +66,10 @@ else ifeq ($(TARGET), deb)
 else
 # can't indent because then it looks like part of a recipe
 $(error "TARGET not set to 'rpm' or 'deb'")
+endif
+
+ifeq ($(PACKAGE), )
+$(error "Cannot find the vertica install package in current working directory")
 endif
 
 # The user hasn't handed us a VERTICA_VERSION
@@ -98,7 +102,7 @@ else
 endif
 
 .PHONY: display
-display: 
+display: $(PACKAGE)
 	$(info Variable settings:)
 	$(info PACKAGE: $(PACKAGE))
 	$(info CONTAINER OS: $(CONTAINER_OS))
@@ -108,7 +112,7 @@ display:
 
 .PHONY: rpm_build
 # Defining ${SUFFIX} makes it easier to try variations on the Dockerfile_RPM
-rpm_build: display Dockerfile_RPM${SUFFIX}
+rpm_build: $(PACKAGE) display Dockerfile_RPM${SUFFIX}
 	$(info VERTICA_RPM: $(PACKAGE))
 	$(info CONTAINER_OS_VERSION: $(CONTAINER_OS_VERSION))
 	docker build \
@@ -128,7 +132,7 @@ deb-file-extract-list: $(PACKAGE) file-patterns make-deb-file-extract-list
 
 .PHONY: deb_build
 # Defining ${SUFFIX} makes it easier to try variations on the Dockerfile_DEB
-deb_build: display deb-file-extract-list Dockerfile_DEB${SUFFIX}
+deb_build: $(PACKAGE) display deb-file-extract-list Dockerfile_DEB${SUFFIX}
 	$(info VERTICA_DEB: $(PACKAGE))
 	$(info CONTAINER_OS_VERSION: $(CONTAINER_OS_VERSION))
 	docker build \
