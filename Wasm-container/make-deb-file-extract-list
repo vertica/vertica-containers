@@ -1,0 +1,38 @@
+#!/bin/sh
+# -*- mode: shell-script -*-
+# Copyright (c) [2021] Micro Focus or one of its affiliates.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#    http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+case $# in
+1)
+    DEB=$1
+    ;;
+*)
+    echo Usage: $0 deb-file-name
+    exit 1
+    ;;
+esac
+
+echo Extracting data.tar from $DEB...
+ar x $DEB data.tar.gz 
+echo Putting filenames that match file-patterns into deb-file-extract-list...
+# The first grep includes directory names (ending in /)
+# The second grep removes these, because tar generates a
+# misleading message about things being not found in the archive
+# when it tries to put things into whatever it creates for the
+# name ending in /
+tar tf data.tar.gz | grep -f file-patterns | grep -v '/$' > deb-file-extract-list
+rm data.tar.gz
+echo Done

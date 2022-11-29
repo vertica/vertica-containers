@@ -1,0 +1,9 @@
+*.wasm
+*.so
+*~
+*.a
+*.o
+*.rpm
+*.deb
+.deb_dockerimage
+.rpm_dockerimage
