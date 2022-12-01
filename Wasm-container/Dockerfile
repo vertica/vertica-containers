@@ -61,7 +61,6 @@ RUN set -x \
             ntp \
             openssh-client \
             openssh-server \
-            sudo \
             sysstat \
  && chsh -s /bin/bash root \
  # Fix locales
@@ -168,8 +167,6 @@ RUN set -x \
  && apt-get update -y \
  && apt-get upgrade --no-install-recommends -y \
  && apt-get install -y \
-            # centos: glibc-devel
-            # debian g++
             autotools-dev \
             bash \
             binutils \
@@ -267,7 +264,6 @@ RUN sh -c 'curl https://get.wasmer.io -sSfL | sh'
 
 # This is the result of a Rust newbie feeling their way to a proper installation 
 RUN mkdir ${TEMPLATE} ${TOOLDIR} 
-    
 
 WORKDIR /usr/WebAssembly/rust
 COPY reinstall-rust ${TOOLDIR}/reinstall-rust
