@@ -4,11 +4,8 @@
 This is a single-node Docker [Community Edition](https://www.vertica.com/docs/latest/HTML/Content/Authoring/GettingStartedGuide/DownloadingAndStartingVM/DownloadingAndStartingVM.htm) image for Vertica. The base OS for the image is CentOS7.9.2009 with a Vertica Version 11.1.0-0 CE.
 
 # Supported Tags
-* 11.1.0-0, latest
-* 11.0.2-0
-* 11.0.1-0
-* 11.0.0-0
-* 10.1.1-0
+
+See [Tags](https://hub.docker.com/r/vertica/vertica-ce/tags).
 
 # Quick Reference
 
@@ -17,7 +14,8 @@ This is a single-node Docker [Community Edition](https://www.vertica.com/docs/la
 
 # What is Vertica?
 
-Vertica is a unified analytics platform, based on a massively scalable architecture with the broadest set of analytical functions spanning event and time series, pattern matching, geospatial and end-to-end in-database machine learning. Vertica enables you to easily apply these powerful functions to the largest and most demanding analytical workloads, arming you and your customers with predictive business insights faster than any analytics data warehouse in the market. Vertica provides a unified analytics platform across major public clouds and on-premises data centers and integrates data in cloud object storage and HDFS without forcing you to move any of your data.
+Vertica is a unified analytics platform, based on a massively scalable architecture with the broadest set of analytical functions spanning event and time series, pattern matching, geospatial and end-to-end in-database machine learning. Vertica enables you to easily apply these powerful functions to the largest and most demanding analytical workloads, arming you and your customers with predictive business insights faster than any analytics data warehouse in the market. Vertica provides a unified analytics platform across major public clouds and on-premises data centers and integrates data in cloud object storage and HDFS without forcing you to move any of your data.  
+
 https://www.vertica.com/
 
 # Prerequisites
@@ -123,4 +121,5 @@ docker-compose --file ./docker-compose.yml --project-directory <directory_name> 
 
 
 ## License:
-Vertica Community Edition is licensed under the [Vertica Community Edition License](https://www.vertica.com/end-user-license-agreement-ce-version/).
+
+View the [license information](https://www.microfocus.com/en-us/legal/software-licensing) for this image.
