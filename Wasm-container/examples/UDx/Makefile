@@ -10,16 +10,17 @@ ifeq ($(WASMHOME), undefined)
 endif
 
 UDX_WASM=../udx_wasm.o
+PWD := $(shell pwd)
 LIBWASMER=${WASMHOME}/.wasmer/lib/libwasmer.a
-SUM_C_WASM="/data/dmankins/WebAssembly/vertica-containers/Wasm-container/examples/UDx/build/sum.c.wasm"
-SUM_RS_WASM="/data/dmankins/WebAssembly/vertica-containers/Wasm-container/examples/UDx/build/sum.rs.wasm"
+SUM_C_WASM="${PWD}/build/sum.c.wasm"
+SUM_RS_WASM="${PWD}/build/sum.rs.wasm"
 
 ## Set to the location of the SDK installation
 SDK_HOME?=/opt/vertica/sdk
 SDK_JAR?=/opt/vertica/
 
 CXX=g++
-CXXFLAGS:=$(CXXFLAGS) -O2 -I .. -I $(SDK_HOME)/include \
+CXXFLAGS:=$(CXXFLAGS) -O3 -I .. -I $(SDK_HOME)/include \
 	-I HelperLibraries -g -Wall -Wno-unused-value \
 	-shared -fPIC --std=c++11 \
 	-D_GLIBCXX_USE_CXX11_ABI=0 
