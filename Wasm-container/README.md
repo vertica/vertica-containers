@@ -115,14 +115,18 @@ To use this installation, before you run the container interactively, use it to 
 
 ```shell
 # Define $WASMHOME for this inside-the-container shell
-user_id=`id -u`
+export VERTICA_VERSION=12.0.1-0
 export WASMHOME=$HOME/WebAssembly
-mkdir $WASMHOME
+user_id=`id -u`
+export 
+if [ ! =d $WASMHOME ]; then
+    mkdir $WASMHOME
+fi 
 docker run \
         -e HOME \
         -u $user_id \
         -v $HOME:$HOME:rw \
-        vwasmsdk:ubuntu-12.0.1-0 \
+        vwasmsdk:ubuntu-$VERTICA_VERSION \
         $WASMHOME \
         "/usr/WebAssembly/template/tools/copy-template-to-sandbox $WASMHOME"
 ```
@@ -145,28 +149,27 @@ To set up your environment appropriately, run
 source $WASMHOME/.env-setup
 ```
 
-`./vwasm-bash` does the following:
+`vwasm-bash` has some defaults that may be overridden by setting environment variables. 
 
-```shell
-user_id=`id -u`
-SANDBOX=/data/dmankins/WebAssembly
-docker run \
-        -u $user_id \
-        -v $SANDBOX:$SANDBOX \
-        -v $HOME:$HOME \
-        -e HOME \
-        -it \
-        vwasmsdk:ubuntu-12.0.1-0 
-```
+| Name                      | Definition |
+|---------------------------|------------|
+| VERTICA_VERSION | The version number of the Vertica binary used in the build process. This value is optional for a [canonically-named Vertica binary](#building-with-a-canonically-named-vertica-binary).<br> You can use this variable to build containers for different Vertica versions. |
+| WASM_MOUNT | An optional space-separated list of host directories to mount in the UDx container --- that is, "I'm going to want to refer to files in these directories in, for example, my makefile, or as include directories in code to be compiled" |
+| VWASM_ENV | names a file filled with variable definitions.  This uses the --env-file option of the "docker run" command, so the file needs to be formatted for that option |
 
-The `docker run` options are:
+If you have multiple vwasm containers, you can
+choose among them by specifying the tag, which
+is derived from `vwasmsdk:${OSTAG}-${VERTICA_VERSION}`, if those
+variables are set in the environment (you can also define `CONTAINER_TAG` if you've chosen a different container tagging scheme).
 
-- `-u $user_id`: By initializing `user_id` with the output of the `id -u` command, processes inside the container run with your UID so you can edit and modify files in your working directories.
-- `-v $SANDBOX:$SANDBOX`: mounts the host computer's `$SANDBOX` directory inside the container with the name `$SANDBOX` (you must, of course, define `$SANDBOX` first).  This argument is optional (e.g., if your sandbox is in your `$HOME` directory).
-- `-v $HOME:$HOME`: mounts the host computer's `$HOME` directory inside the container with the name `$HOME`.
-- `-e HOME` : passes the `$HOME` environment variable into the interactive shell in the container
-- `-it`: run an interactive shell inside the container
-- `wasm-playground:ubuntu`: the name of the container image
+`vwasm-bash` creates a shell with the following directories mounted, sharing the name they have in the host system:
+
+- `$HOME`
+- your currently connected directory
+- any directories listed in the environment variable `$VWASM_VOLUMES`
+
+In addition, a Docker volume is mounted as `/vwasmdata`.
+
 
 ### An annoying thing about Rust
 
@@ -190,7 +193,7 @@ container to run the rust installation commands
 
 # An experiment with compiling to Wasm
 
-In the container's `/usr/WebAssembly/vertica` directory are some simple files used as a proof-of-concept for creating unfenced Vertica UDxes in C and Rust using Wasm.
+In the container's `/usr/WebAssembly/vertica` directory are some simple files used as a proof-of-concept for creating unfenced Vertica UDxes in C and Rust using Wasm (these files are also in the `examples/UDx` subdirectory of this repository).  
 
 Copy the directory to your own sandbox (so the files are in a directory you can modify).
 
@@ -200,7 +203,7 @@ Make targets are:
 
 - `clean`: remove the constructed files
 - `wasmer-hello`: compile a simple "hello, world" C program to Wasm
-- `run-hello`: execute the `wasmer-hello` program by specifying the dynamically-linked library path.
+- `run_hello`: execute the `wasmer-hello` program by specifying the dynamically-linked library path.
 - `sum.rs.wasm`: compile the Rust module `sum.rs` to a Wasm module that can be linked into a Vertica UDx.
 - `sum.c.wasm`: compile the C `sum.c` module to a Wasm module that can be linked into a Vertica UDx.
 - `udx_wasm.o`: compile the C++ wrapper for Wasm UDxes.
