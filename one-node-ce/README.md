@@ -272,9 +272,6 @@ This container mounts a [Docker volume](https://docs.docker.com/storage/volumes/
 
 > **Note**: A Docker volume is represented on the host filesystem as a directory. These directories are created automatically and stored at `/var/lib/docker/volumes/`. Each volume is stored under `./volumename/_data/`. A small filesystem might might limit the amount of data you can store in your database.
 
-## Extending the image
-
-The `dbadmin` user environment is extended to be user-friendly. For details, see the [vertica_env.sh](env_setup/vertica_env.sh) and [.vsqlrc](env_setup/.vsqlrc) scripts.
 
 ## Runtime configuration
 
