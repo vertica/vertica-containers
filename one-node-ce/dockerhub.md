@@ -5,7 +5,9 @@ This is a single-node Docker [Community Edition](https://www.vertica.com/docs/la
 
 # Supported Tags
 
-See [Tags](https://hub.docker.com/r/vertica/vertica-ce/tags).
+Vertica tags each container with the version number in the format _`<major>.<minor>.<patch>-<hotfix>`_. For example, `11.1.0-0` is the tag for Vertica version 11.1, service pack 0, hotfix 0. The `latest` tag is the most recently released version of Vertica.
+
+For a comprehensive list, see [Tags](https://hub.docker.com/r/vertica/vertica-ce/tags).
 
 # Quick Reference
 
