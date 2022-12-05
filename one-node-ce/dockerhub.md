@@ -76,15 +76,15 @@ You can then access the database in one of the following ways:
 - vsql on the host
 - An external client using the `5433` and`5444` port
 
-## Persisting data
+# Persistence
 
-This container mounts a [Docker volume](https://docs.docker.com/storage/volumes/) named `vertica-data` in the container to persist data for the Vertica database. A Docker volume is used instead of a mounted host directory for the following reasons:
+This container mounts a [Docker volume](https://docs.docker.com/storage/volumes/) named `vertica-data` to persist data for the Vertica database. A Docker volume provides the following advantages over a mounted host directory:
 * Cross-platform acceptance. Docker volumes are compatible with Linux, MacOS, and Microsoft Windows. 
 * The container runs with different username to user-id mappings. A container with a mounted host directory might create files that you cannot inspect or delete because they are owned by a user that is determined by the Docker daemon. 
 
 > **Note**: A Docker volume is represented on the host filesystem as a directory. These directories are created automatically and stored at `/var/lib/docker/volumes/`. Each volume is stored under `./volumename/_data/`. A small filesystem might might limit the amount of data you can store in your database.
 
-### Bind mounts
+## Bind mounts
 
 As an alternative to a Docker volume, you can use a [bind mount](https://docs.docker.com/storage/bind-mounts/) to persist data to another directory with sufficient disk space:
 ```sh
@@ -95,7 +95,8 @@ $ docker run -p 5433:5433 -p 5444:5444\
 ```
 > **Important**: The user that executes `docker run` must have read and write privileges on the source directory.
 
-## Docker Compose
+# Docker Compose
+
 Define a multi-container application with a `docker-compose` YAML file. For example:
 ```yaml
 version: "3.9"
@@ -127,6 +128,6 @@ $ docker-compose --file ./docker-compose.yml --project-directory <directory_name
 > **Note**: The Docker Compose integration is not tested, so there are no network setup recommendations.
 
 
-## License:
+# License
 
 View the [license information](https://www.microfocus.com/en-us/legal/software-licensing) for this image.

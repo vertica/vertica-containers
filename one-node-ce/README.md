@@ -94,11 +94,7 @@ $ make IMAGE_NAME=one-node-ce TAG=latest VERTICA_DB_USER=vertica VERTICA_DB_UID=
 ```
 ## Test the image
 
-After you [build the image](#build-the-image), test it with the [run_tests.sh](./run-tests.sh) script. You can use the `make test` target to run `run_tests.sh`, or you can run the script directly.
-
-> **IMPORTANT**: `run_tests.sh` requires a [local copy of the vsql client](#get-a-local-copy-of-vsql).
-
-`run_tests.sh` uses your image to create a new container with a unique tag and volume, then verifies that the container can execute Vertica and some additional libraries. Because the test configures optional libraries and creates the VMart database, creating a new container can take up to three minutes.
+After you [build the image](#build-the-image), test it with the [run_tests.sh](./run-tests.sh) script. You can use the `make test` target to run `run_tests.sh`, or you can run the script directly
 
 > **IMPORTANT**: The script uses the Vertica port number `5433`. You must stop any existing Vertica server on your test system before you test your container.
 
@@ -106,9 +102,7 @@ After you [build the image](#build-the-image), test it with the [run_tests.sh](.
 
 Passing tests: `All tests passed` is displayed at the end of the output, and the script exits with a `0` exit status.
 
-Failed tests: The output describes the error in the following format: `ERROR: <description>`.
-
-### Debug errors
+Failed tests: The output describes the error in the following format: `ERROR: <d#customize-the-vertica-useror
 
 You can run the script with the `-k` argument to retain the container and examine it after testing:
 
@@ -173,7 +167,8 @@ In the preceding command:
 
 ### Runtime configuration
 
-To configure the Vertica container during runtime, inject environment variables when when you execute `docker run`:
+When you execute `docker run`, you can inject environment variables at runtime:
+
 ```shell
 $ docker run -p 5433:5433 -d \
   -e TZ='Europe/Prague' \
@@ -206,12 +201,7 @@ $ docker run -p 5433:5433 \
            vertica-ce:latest
 ```
 
-# Access the container filesystem
-
-> **NOTE**: If you have a [local copy](#get-a-local-copy-of-vsql) of `vsql`, you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/AdminTools/WritingAdministrationToolsScripts.htm).
-
-## Access with `run-shell-in-container.sh`
-
+# Access the container filesysteof `vsql`, you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Author
 If you used the `start-vertica.sh` script to [start the server instance](#start-the-vertica-server-instance), use the `run-shell-in-container.sh` script to access a shell within a container:
 
 ```shell
@@ -219,7 +209,7 @@ $ ./run-shell-in-container.sh [-d cid_dir] [-n container-name] [-u uid] [-h ] [ 
 ```
 In the preceding command:
 - `-d cid_dir` is the [cid.txt](#cidtxt-file) file that the `start-vertica.sh` creates to store the container ID.
-- `-u uid` specifies the user account inside the container. Vertica recommends that you use `DBADMIN_ID` (default 1000), because [DBADMIN](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PredefinedRoles.htm) has proper access to Vertica directories inside the container.
+- `-u uid` specifies the user account inside the container. Vertica recommends that you use `DBADMIN_ID` (default 1000), because [DBADMIN](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PredefinedRoles.htm) has proper access to #customize-the-vertica-userhecontainer.
 
 You must specify either `-d directory-for-cid.txt` or `-n container-name`. For example:
 
@@ -253,23 +243,20 @@ After you [access a shell](#access-the-container-filesystem), run `/opt/vertica/
 $ docker exec -it <container_name> /opt/vertica/bin/vsql
 ```
 
-## External vsql or external client
+## External vsql or client
 
-The container exposes port 5433 for external client access. To access the database from outside the container, you must have a [local copy of the vsql client](#get-a-local-copy-of-vsql).
+Before you can access a Vertica database from outside the container, you must install a local copy of vsql. To download vsql and all available drivers, see [Client Drivers](https://www.vertica.com/download/vertica/client-drivers/).
 
-### Get a local copy of vsql
+The container exposes port `5433` for external client access.
 
-To download vsql and all available drivers, see [Client Drivers](https://www.vertica.com/download/vertica/client-drivers/).
-
-### Access the database
+## Access the database
 
 By default, the Dockerfile creates the `dbadmin` user in the container database. The following command accesses the database:
 
 ```shell
 $ vsql -U dbadmin
 ```
-You can configure the database user name with the `VERTICA_DB_USER` ARG variable in the Dockerfile or when you [build the image](#custom-build-time-variables).
-
+You can configure the database user name with the `VERTICA_DB_USER` ARG variable in the Dockerfile or when you [build the image](#customize-the-vertica-user).
 
 ## View container logs
 
@@ -293,9 +280,6 @@ $ docker stop `cat cid.txt`
 # Stop a container named vertica_ce
 $ docker stop vertica_ce
 ```
-
-
-
 
 # References and Contributions
 
