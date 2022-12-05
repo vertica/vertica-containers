@@ -201,7 +201,12 @@ $ docker run -p 5433:5433 \
            vertica-ce:latest
 ```
 
-# Access the container filesysteof `vsql`, you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Author
+# Access the container filesystem
+
+> If you have a local copy of `vsql`, you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Author
+
+## Access with `run-shell-in-container.sh`
+
 If you used the `start-vertica.sh` script to [start the server instance](#start-the-vertica-server-instance), use the `run-shell-in-container.sh` script to access a shell within a container:
 
 ```shell
