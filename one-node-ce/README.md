@@ -209,14 +209,14 @@ $ docker run -p 5433:5433 \
 
 ## Access with `run-shell-in-container.sh`
 
-If you used the `start-vertica.sh` script to [start the server instance](#start-the-vertica-server-instance), use the `run-shell-in-container.sh` script to access a shell within a container:
+If you used the `start-vertica.sh` script to [start the container](#start-with-start-verticash), use the `run-shell-in-container.sh` script to access a shell within a container:
 
 ```shell
 $ ./run-shell-in-container.sh [-d cid_dir] [-n container-name] [-u uid] [-h ] [ ? ]
 ```
 In the preceding command:
 - `-d cid_dir` is the [cid.txt](#cidtxt-file) file that the `start-vertica.sh` creates to store the container ID.
-- `-u uid` specifies the user account inside the container. Vertica recommends that you use `DBADMIN_ID` (default 1000), because [DBADMIN](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PredefinedRoles.htm) has proper access to #customize-the-vertica-userhecontainer.
+- `-u uid` specifies the user account inside the container. Vertica recommends that you use `DBADMIN_ID` (default 1000), because [DBADMIN](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/DBADMINRole.htm) has proper access to #customize-the-vertica-userhecontainer.
 
 You must specify either `-d directory-for-cid.txt` or `-n container-name`. For example:
 
