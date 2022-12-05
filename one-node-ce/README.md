@@ -203,7 +203,7 @@ $ docker run -p 5433:5433 \
 
 # Access the container filesystem
 
-> If you have a local copy of `vsql`, you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Author
+> If you have a local copy of `vsql`, you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/AdminTools/WritingAdministrationToolsScripts.htm)
 
 ## Access with `run-shell-in-container.sh`
 
