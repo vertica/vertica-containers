@@ -102,7 +102,9 @@ After you [build the image](#build-the-image), test it with the [run_tests.sh](.
 
 Passing tests: `All tests passed` is displayed at the end of the output, and the script exits with a `0` exit status.
 
-Failed tests: The output describes the error in the following format: `ERROR: <d#customize-the-vertica-useror
+Failed tests: The output describes the error in the following format: `ERROR: <description>`.
+
+### Debug errors
 
 You can run the script with the `-k` argument to retain the container and examine it after testing:
 
@@ -203,7 +205,7 @@ $ docker run -p 5433:5433 \
 
 # Access the container filesystem
 
-> If you have a local copy of `vsql`, you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/AdminTools/WritingAdministrationToolsScripts.htm)
+> If you have a [local copy of vsql](#external-vsql-or-client), you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/AdminTools/WritingAdministrationToolsScripts.htm)
 
 ## Access with `run-shell-in-container.sh`
 
