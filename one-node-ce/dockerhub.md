@@ -48,7 +48,7 @@ $ docker run -p 5433:5433 -p 5444:5444 \
            vertica/vertica-ce
 ```
 
-In the previous command:
+In the preceding command:
 * `vertica-data` is a [Docker volume](https://docs.docker.com/storage/volumes/).
 * `vertica_ce` is the name of the container.
 * `vertica/vertica-ce` is the image name.

@@ -44,9 +44,9 @@ If you do not have a Vertica archive, register to download the free [Community E
 
 ## Build the image
 
-The repository [Makefile](./Makefile) creates an image with a [DBADMIN role](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PredefinedRoles.htm).
+To simplify the build process, this repository provides a [Makefile](./Makefile). It builds a base image with default image properties, but you can set environment variables to customize some properties.
 
-Export the following environment variables to customize image properties:
+The following table describes base image properties that you can customize with environment variables:
 
 | Environment Variable | Description | Default Values |
 | :--------------------| :-----------| :--------------|
@@ -56,38 +56,34 @@ Export the following environment variables to customize image properties:
 | `OS_VERSION`   | Required. Operatoring system versions. | CentOS: `7.9.2009`<br> Ubuntu: `18.04` | 
 | `VERTICA_PACKAGE` | Name of the RPM or DEB file. | CentOS: `vertica-x86_64.RHEL6.latest.rpm`<br>Ubuntu: `vertica.latest.deb` |
 
-> **Note**: You can edit the `Makefile` defaults to custom values for your environment.
-> If you do not specify `VERTICA_PACKAGE`, and `TAG` is not set to `latest`, then the `TAG` must be the Vertica version because it is used to construct the version portion of the `VERTICA_PACKAGE` name.
+> **Note**: If you do not specify `VERTICA_PACKAGE`, and `TAG` is not set to `latest`, then the `TAG` must be the Vertica version because it is used to construct the version portion of the `VERTICA_PACKAGE` name.
 
-#### Examples
+### Examples
 
-Default values:
 ```shell
+# Default values:
 $ make
-```
-Custom image name and tag:
-```shell
+
+# Custom image name and tag:
 $ make IMAGE_NAME=one-node-ce TAG=latest
-```
 
-Ubuntu base OS:
-```shell
-$ make
-```
+# Ubuntu base OS:
+$ make OS_TYPE=Ubuntu Tag=latest  
 
-Custom RPM file name:
-```shell
+# Custom RPM file name:
 $ make VERTICA_PACKAGE=vertica-11.0.0.x86_64.RHEL6.rpm
 ```
 
-### Custom build-time variables
+### Customize Vertica User
 
-Export the following environment variables to customize the container at build-time:
+The [Makefile](./Makefile) creates an image with a [DBADMIN role](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PredefinedRoles.htm). You can set environment variables to customize some database user properties.
+
+The following table describes database user properties that you can customize with environment variables:
 
 | Environment Variable | Description | Default Values |
 | :--------------------| :-----------| :--------------|
 | `VERTICA_DB_USER`   | OS user and implicit database [superuser](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Privileges/AboutSuperuserPrivileges.htm).  | `dbadmin` |
-| `VERTICA_DB_UID`    | Vertica user uid.                        | `1000` |
+| `VERTICA_DB_UID`    | Vertica user UID.                        | `1000` |
 | `VERTICA_DB_GROUP`  | Group for database administrator users.  | `verticadba` | 
 | `VERTICA_DB_NAME`   | Vertica database name.                   | `VMart` | 
 
@@ -96,26 +92,22 @@ Export the following environment variables to customize the container at build-t
 ```shell
 $ make IMAGE_NAME=one-node-ce TAG=latest VERTICA_DB_USER=vertica VERTICA_DB_UID=1200
 ```
-### Reducing file size
+## Test the image
 
-After `Dockerfile_<distro>` installs the RPM or DEB file, it runs `tools/cleanup.sh`. This script trims the size of the distribution by removing less-commonly used files, and applies other file-size reduction techniques.
+After you [build the image](#build-the-image), test it with the `run_tests.sh` script. You can use the `make test` target to run `run_tests.sh`, or you can run the script directly.
 
-## Testing the container
+> **IMPORTANT**: `run_tests.sh` requires a [local copy of the vsql client](#get-a-local-copy-of-vsql).
 
-Test the container with the `run_tests.sh` script. You can use the `make test` target to run `run_tests.sh`, or you can run the script directly.
+`run_tests.sh` uses your image to create a new container with a unique tag and volume, then verifies that the container can execute Vertica and some additional libraries. Because the test configures optional libraries and creates the VMart database, creating a new container can take up to three minutes.
 
-### run_tests.sh
-The `run_tests.sh` script verifies that the container can execute Vertica and some of the additional libraries.
+> ****IMPORTANT**: The script uses the Vertica port number `5433`. You must stop any existing Vertica server on your test system before you test your container.
 
-> **IMPORTANT**: `run_tests.sh` requires a [local copy of the vsql client](#getting-a-local-copy-of-vsql). 
-
-The script uses the Vertica port number `5433`, so you must stop any existing Vertica server on your test system before you test your container.
-
-The test uses your image to create a new container with a unique tag and volume. Because the test sets up the optional libraries and creates the VMart database, creating a new container can take up to three minutes.
-
+### Test output
 If the tests pass, `All tests passed` is displayed at the end of the output, and the script exits with a `0` exit status. If the test fails with errors, the output contains `ERROR: <description>`, where `<description>` is a description of the error.
 
-You can run the script with the `-k` argument to retain the container and make it available for examination after testing:
+### Debug errors
+
+You can run the script with the `-k` argument to retain the container and examine it after testing:
 
 ```shell
 $ ./run-test.sh -k
@@ -133,7 +125,7 @@ In the previous command, `<suffix>` refers to the the PID of the test-script she
 
 ## Start with `start-vertica.sh`
 
-To simplify usage, this repository provides the `start-vertica.sh` script with the following options:
+Start a container with the `start-vertica.sh` script and the following options:
 
 ```shell
 Usage: ./start-vertica.sh [-c cname] [-d cid_dir] [-h] [-i img_name] [-t tag] [-v hostpath:containerdir] -V docker-volume
@@ -153,16 +145,16 @@ Options are:
 
 ### cid.txt file
 
-The `start-vertica.sh` script creates the **cid.txt** file, which stores the container ID within the container. By default, **cid.txt** is stored in current working directory. You can specify a directory to place the **cid.txt** file using the `-d cid_dir` option. For example, the following command places **cid.txt** in the `/home` directory:
+The `start-vertica.sh` script creates the **cid.txt** file that stores the container ID. By default, **cid.txt** is stored in current working directory. To change the default directory, use the `-d cid_dir` option. For example, the following command stores **cid.txt** in the `/home` directory:
 
 ```shell
 $ start-vertica.sh -d /home
 ```
-> **NOTE**: You must have read and write access to the `cid_dir`.
+> **NOTE**: You must have read and write access to `cid_dir`.
 
 ## Start with `docker run`
 
-You can also use `docker run` to start the server instance. For example:
+You can also start a container with `docker run`:
 
 ```shell
 $ docker run -p 5433:5433 \
@@ -170,7 +162,7 @@ $ docker run -p 5433:5433 \
            --name vertica_ce \
            vertica-ce:latest
 ```
-In the previous command:
+In the preceding command:
 * `vertica-data` is a [Docker volume](https://docs.docker.com/storage/volumes/).
 * `vertica_ce` is the name of the container.
 * `vertica/vertica-ce` is the image name.
@@ -183,7 +175,7 @@ Supported extensions include:
 - `sql`: SQL commands executed with vsql
 - `sh`: Shell scripts
 
-The following command runs custom scripts with a [bind mount](https://docs.docker.com/storage/bind-mounts/):
+For example, run custom scripts with a [bind mount](https://docs.docker.com/storage/bind-mounts/):
 
 ```shell
 $ docker run -p 5433:5433 \
@@ -194,11 +186,16 @@ $ docker run -p 5433:5433 \
 
 ## Access the container filesystem
 
-If you used the `start-vertica.sh` script to [start the server instance](#start-the-vertica-server-instance), use the `run-shell-in-container.sh` script to access a shell within a container. This script uses the **cid.txt** file that the `start-vertica.sh` creates to store the container ID. In the following command, `<cid_dir>` is the directory that stores **cid.txt**:
+> **NOTE**: If you have a [local copy](#get-a-local-copy-of-vsql) of `vsql`, you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/AdminTools/WritingAdministrationToolsScripts.htm).
+
+If you used the `start-vertica.sh` script to [start the server instance](#start-the-vertica-server-instance), use the `run-shell-in-container.sh` script to access a shell within a container:
 
 ```shell
-$ ./run-shell-in-container.sh [-d directory-for-cid.txt] [-n container-name] [-u uid] [-h ] [ ? ]
+$ ./run-shell-in-container.sh [-d cid_dir] [-n container-name] [-u uid] [-h ] [ ? ]
 ```
+In the preceding command:
+- `-d cid_dir` is the [cid.txt](#cidtxt-file) file that the `start-vertica.sh` creates to store the container ID.
+- `-u uid` specifies the user account inside the container. Vertica recommends that you use `DBADMIN_ID` (default 1000), because that user has proper access to Vertica directories inside the container.
 
 You must specify either `-d directory-for-cid.txt` or `-n container-name`. For example:
 
@@ -206,72 +203,69 @@ You must specify either `-d directory-for-cid.txt` or `-n container-name`. For e
 $ ./run-shell-in-container.sh -n vertica_ce
 ```
 
-`-u uid` specifies the user account inside the container. Vertica recommends that you use `DBADMIN_ID` (default 1000), because that user has proper access to Vertica directories inside the container.
-
-> **NOTE**: If you have a [local copy](#getting-a-local-copy-of-vsql) of `vsql`, you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/AdminTools/WritingAdministrationToolsScripts.htm).
-
 ### Access with `docker exec`
-Alternatively, access a shell in the container with `docker exec`. `docker exec` requires that you provide the container name:
+
+Access a shell in the container with `docker exec`. `docker exec` requires that you provide the container name:
 
 ```shell
 $ docker exec -it <container name> bash -l
 ```
 
-### Connect to the databse
-After you access a shell, run `/opt/vertica/bin/vsql` to connect to the database and execute `vsql` commands on the files and volumes mounted in the container. For example:
+## Connect to the database
+
+After you [access a shell](#access-the-container-filesystem), run `/opt/vertica/bin/vsql` to connect to the database and execute `vsql` commands on the files and volumes mounted in the container. For example:
+
 ```shell
 $ docker exec -it <container_name> /opt/vertica/bin/vsql
 ```
 
 ## View container logs
 
-Fetch the container logs with `docker logs`. The following command uses [cid.txt](#cidtxt-file):
+Fetch the container logs with `docker logs`. Identify the container with [cid.txt](#cidtxt-file) or the container name:
 
 ```shell
+# With cid.txt
 $ docker logs `cat cid.txt`
-```
-Fetch the logs for a container named **vertica_ce**:
 
-```shell
+# Fetch the logs for a container named vertica_ce:
 $ docker logs vertica_ce
 ```
 ## Stop the container
 
-Stop the container with `docker stop`. The following command uses [cid.txt](#cidtxt-file):
+Stop the container with `docker stop`. Identify the container with [cid.txt](#cidtxt-file) or the container name:
 
 ```shell
+# With cid.txt
 $ docker stop `cat cid.txt`
-```
-The following command stops a container named **vertica_ce**:
 
-```shell
-$ docker logs vertica_ce
+# Stop a container named vertica_ce
+$ docker stop vertica_ce
 ```
 
-# Access the database with vsql or external client
+## Connect to the database with vsql or external client
 
-The container exposes port 5433 for external client access. To access the database from outside the container, you must have a [local copy of the vsql client](#getting-a-local-copy-of-vsql).
+The container exposes port 5433 for external client access. To access the database from outside the container, you must have a [local copy of the vsql client](#get-a-local-copy-of-vsql).
 
-## Getting a local copy of vsql
+### Get a local copy of vsql
 
-See [Client Drivers](https://www.vertica.com/download/vertica/client-drivers/) in to download all available client drivers.
+To download vsql and all available drivers, see [Client Drivers](https://www.vertica.com/download/vertica/client-drivers/).
 
-## Access the database
+### Access the database
 
 By default, the Dockerfile creates the `dbadmin` user in the container database. The following command accesses the database:
+
 ```shell
 $ vsql -U dbadmin
 ```
-You can configure the database user name with the `vertica_db_user` ARG variable in the Dockerfile or when you [build the image](#custom-build-time-variables).
+You can configure the database user name with the `VERTICA_DB_USER` ARG variable in the Dockerfile or when you [build the image](#custom-build-time-variables).
 
 ## Persisting data
 
-This container mounts a [Docker volume](https://docs.docker.com/storage/volumes/) named `vertica-data` in the container to persist data for the Vertica database. A Docker volume is used instead of a mounted host directory for the following reasons:
+This container mounts a [Docker volume](https://docs.docker.com/storage/volumes/) named `vertica-data` to persist data for the Vertica database. A Docker volume provides the following advantages over a mounted host directory:
 * Cross-platform acceptance. Docker volumes are compatible with Linux, MacOS, and Microsoft Windows. 
 * The container runs with different username to user-id mappings. A container with a mounted host directory might create files that you cannot inspect or delete because they are owned by a user that is determined by the Docker daemon. 
 
 > **Note**: A Docker volume is represented on the host filesystem as a directory. These directories are created automatically and stored at `/var/lib/docker/volumes/`. Each volume is stored under `./volumename/_data/`. A small filesystem might might limit the amount of data you can store in your database.
-
 
 ## Runtime configuration
 
@@ -281,13 +275,14 @@ $ docker run -p 5433:5433 -d \
   -e TZ='Europe/Prague' \
   vertica-ce:latest
 ```
-The following table contains configurable environment variable parameters:
+
+The following table describes environment variables that you can configure at runtime:
 
 | Environment Variable | Description | 
 | :--------------------| :-----------|
-| `APP_DB_USER` | Name of a database user, in addition to `vertica_db_user`. This user is created only when this variable is set. By default, this user is assigned [pseudosuperuser](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PSEUDOSUPERUSERRole.htm) privileges. |
+| `APP_DB_USER` | Name of a database user, in addition to `VERTICA_DB_USER`. This user is created only when this variable is set. By default, `APP_DB_USER` is assigned [pseudosuperuser](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PSEUDOSUPERUSERRole.htm) privileges. |
 | `APP_DB_PASSWORD` | Password for `APP_DB_USER`. If this is omitted, the password is empty. |
-| `TZ`: "${VERTICA_CUSTOM_TZ:-Europe/Prague}" | The database time zone.<br><br>**IMPORTANT**: Vertica does not contain all timezones. Each Dockerfile contains a  commented-out workaround solution that begins "Link OS timezones". Uncomment the workaround to use time zones.<br>Setting the time zone with VERTICA_CUSTOM_TZ enables you to override it from your environment. |
+| `TZ`: "${VERTICA_CUSTOM_TZ:-Europe/Prague}" | The database time zone. Setting `VERTICA_CUSTOM_TZ` overrides the time zone set in your environment.<br><br>**IMPORTANT**: Vertica does not contain all time zones. Each Dockerfile contains a commented-out workaround solution that begins "Link OS time zones". Uncomment the workaround to use time zones.<br> |
 | `DEBUG_FAILING_STARTUP` | For development purposes. When you set the value to `y`, the entrypoint script does not end in case of failure, so you can investigate any failures. |
 
 # References and Contributions
