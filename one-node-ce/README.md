@@ -188,9 +188,7 @@ The following table describes environment variables that you can configure at ru
 
 ## Custom scripts
 
-The `docker-entrypoint.sh` script can run custom scripts during startup. You must store the scripts in a local directory named `.docker-entrypoint-initdb.d` and mount it in the container filesystem in `/docker-entrypoint-initdb.d/`. Scripts are executed in lexicographical order.
-
-Supported extensions include:
+The `docker-entrypoint.sh` script can run custom scripts during startup. You must store the scripts in a local directory named `.docker-entrypoint-initdb.d` and mount it in the container filesystem in `/docker-entrypoint-initdb.d/`. Scripts are executed in lexicographical order. Supported extensions include:
 - `sql`: SQL commands executed with vsql
 - `sh`: Shell scripts
 
@@ -226,7 +224,7 @@ $ ./run-shell-in-container.sh -n vertica_ce
 
 ## Access with `docker exec`
 
-Access a shell in the container with `docker exec`. `docker exec` requires that you provide the container name:
+Access a shell in the container with `docker exec`. `docker exec` requires the container name:
 
 ```shell
 $ docker exec -it <container name> bash -l
