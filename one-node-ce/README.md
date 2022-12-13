@@ -19,7 +19,7 @@ Container techology provides the freedom to run environments independently of th
 
 Vertica provides a Dockerfile for different distributions so that you can create an containerized environment that you are the most comfortable with. This is helpful if you need to access a container shell to perform tasks, such as administering the database with [admintools](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/AdminTools/WritingAdministrationToolsScripts.htm).
 
-## Vertica:
+## Vertica
 - 12.x
 - 11.x
 - 10.x
@@ -94,7 +94,7 @@ $ make IMAGE_NAME=one-node-ce TAG=latest VERTICA_DB_USER=vertica VERTICA_DB_UID=
 ```
 ## Test the image
 
-After you [build the image](#build-the-image), test it with the [run_tests.sh](./run-tests.sh) script. You can use the `make test` target to run `run_tests.sh`, or you can run the script directly
+After you [build the image](#build-the-image), test it with the [run_tests.sh](./run-tests.sh) script. You can use the `make test` target to run `run_tests.sh`, or you can run the script directly.
 
 > **IMPORTANT**: The script uses the Vertica port number `5433`. You must stop any existing Vertica server on your test system before you test your container.
 
@@ -183,14 +183,12 @@ The following table describes environment variables that you can configure at ru
 | :--------------------| :-----------|
 | `APP_DB_USER` | Name of a database user, in addition to `VERTICA_DB_USER`. This user is created only when this variable is set. By default, `APP_DB_USER` is assigned [pseudosuperuser](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PSEUDOSUPERUSERRole.htm) privileges. |
 | `APP_DB_PASSWORD` | Password for `APP_DB_USER`. If this is omitted, the password is empty. |
-| `TZ`: "${VERTICA_CUSTOM_TZ:-Europe/Prague}" | The database time zone. Setting `VERTICA_CUSTOM_TZ` overrides the time zone set in your environment.<br><br>**IMPORTANT**: Vertica does not contain all time zones. Each Dockerfile contains a commented-out workaround solution that begins "Link OS time zones". Uncomment the workaround to use time zones.<br> |
+| `TZ` | The database time zone. Setting `TZ` overrides the time zone set in your environment.<br><br>**IMPORTANT**: Vertica does not contain all time zones. Each Dockerfile contains a commented-out workaround solution that begins "Link OS time zones". Uncomment the workaround to use time zones.<br> |
 | `DEBUG_FAILING_STARTUP` | For development purposes. When you set the value to `y`, the entrypoint script does not end in case of failure, so you can investigate any failures. |
 
 ## Custom scripts
 
-The `docker-entrypoint.sh` script can run custom scripts during startup. You must store the scripts in a local directory named `.docker-entrypoint-initdb.d` and mount it in the container filesystem in `/docker-entrypoint-initdb.d/`. Scripts are executed in lexicographical order.
-
-Supported extensions include:
+The `docker-entrypoint.sh` script can run custom scripts during startup. You must store the scripts in a local directory named `.docker-entrypoint-initdb.d` and mount it in the container filesystem in `/docker-entrypoint-initdb.d/`. Scripts are executed in lexicographical order. Supported extensions include:
 - `sql`: SQL commands executed with vsql
 - `sh`: Shell scripts
 
@@ -226,7 +224,7 @@ $ ./run-shell-in-container.sh -n vertica_ce
 
 ## Access with `docker exec`
 
-Access a shell in the container with `docker exec`. `docker exec` requires that you provide the container name:
+Access a shell in the container with `docker exec`. `docker exec` requires the container name:
 
 ```shell
 $ docker exec -it <container name> bash -l
