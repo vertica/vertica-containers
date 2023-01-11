@@ -19,9 +19,9 @@
 #	Builds the UDx build container
 #
 #       Copy the .rpm or .deb package to this directory and then invoke
-#		make TARGET=rpm
+#		make TARGET=rpm build
 #	or
-#		make TARGET=deb
+#		make TARGET=deb build
 #       whichever applies to your package
 #
 # This makefile tries to extract the Version and OS from the way
@@ -54,116 +54,104 @@
 #	building from
 # VERTICA_VERSION will be used for the image tag, and is extracted
 #	from the PACKAGE filename, if it is available there
+#
+# Docker Hub
+#
+# These images are also available on docker hub by Vertica's release
+# engineering team using these steps:
+# 1) download the debian and redhat packages
+# 2) login into docker with "docker login"
+# 3) for i in *.+(deb|rpm); do make PACKAGE=$i build push; done
+
+help: ## Display this help.
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' "$(firstword $(MAKEFILE_LIST))"
 
 ifeq ($(TARGET), rpm)
-	PACKAGE ?= $(wildcard vertica*.rpm)
-	CONTAINER_OS=centos
-	CONTAINER_OS_VERSION ?= 7.9.2009
+  PACKAGE ?= $(wildcard vertica*.rpm)
 else ifeq ($(TARGET), deb)
-	PACKAGE = $(wildcard vertica*.deb)
-	CONTAINER_OS=ubuntu
-	CONTAINER_OS_VERSION ?= 18.04
+  PACKAGE = $(wildcard vertica*.deb)
 else
-# can't indent because then it looks like part of a recipe
-$(error "TARGET not set to 'rpm' or 'deb'")
+  # find the package if not specified
+  PACKAGE ?= $(wildcard vertica*.rpm vertica*.deb)
 endif
 
-ifeq ($(PACKAGE), )
-$(error "Cannot find the vertica install package in current working directory")
+# make sure there is just 1
+ifneq ($(words $(PACKAGE)),1)
+  PACKAGE = "PACKAGE - Use 'make PACKAGE=verticaXXX.xxx'"
+else
+  # extract target from package
+  TARGET := $(patsubst %.deb,deb,$(patsubst %.rpm,rpm,$(PACKAGE)))
+endif
+
+ifeq ($(TARGET), rpm)
+  TARGET_U=RPM
+  CONTAINER_OS=centos
+  CONTAINER_OS_VERSION ?= 7.9.2009
+else ifeq ($(TARGET), deb)
+  TARGET_U=DEB
+  CONTAINER_OS=ubuntu
+  CONTAINER_OS_VERSION ?= 18.04
 endif
 
 # The user hasn't handed us a VERTICA_VERSION
 ifeq ($(origin VERTICA_VERSION), undefined)
-	version := $(shell python3 ./vertica_version_from_package.py -v $(PACKAGE))
+	version := $(firstword $(subst -, ,$(patsubst vertica_%,%,$(patsubst vertica-%,%,$(basename $(PACKAGE))))))
+	# use this if you want the hotfix number in the CONTAINER_TAG
+	#version := $(subst _amd64.deb,,$(subst .x86_64.RHEL6.rpm,,$(patsubst vertica_%,%,$(patsubst vertica-%,%,$(PACKAGE)))))
+
 	VERTICA_VERSION = $(version)
 endif
 
-CONTAINER_NAME = verticasdk
-CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS)-$(VERTICA_VERSION)
+CONTAINER_NAME = vertica/verticasdk
+export CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS)-v$(VERTICA_VERSION)
 
-DEFAULT:
-	$(MAKE) vsdk-cp vsdk-g++ vsdk-make
-ifeq ($(TARGET), rpm)	
-	$(MAKE) rpm_build \
-		PACKAGE=$(PACKAGE) \
-		TARGET=$(TARGET) \
-		VERTICA_VERSION=$(VERTICA_VERSION) \
-		OS_VERSION=$(CONTAINER_OS_VERSION) \
-		SUFFIX=${SUFFIX}
-else ifeq ($(TARGET), deb)
-	$(MAKE) deb_build \
-		PACKAGE=$(PACKAGE) \
-		TARGET=$(TARGET) \
-		VERTICA_VERSION=$(VERTICA_VERSION) \
-		OS_VERSION=$(CONTAINER_OS_VERSION) \
-		SUFFIX=${SUFFIX}
-else
-	$(error "TARGET not set to 'rpm' or 'deb'")
-endif
+build: display Dockerfile_$(TARGET_U) ${SUFFIX} ## Build container given PACKAGE=<file>
+	docker build \
+		-f Dockerfile_$(TARGET_U)${SUFFIX} \
+		--build-arg $(TARGET_U)=$(PACKAGE) \
+		--build-arg os_version=$(CONTAINER_OS_VERSION) \
+		--build-arg vertica_version=$(VERTICA_VERSION) \
+		--tag $(CONTAINER_TAG) .
 
 .PHONY: display
-display: $(PACKAGE)
+display: ## Display internal Makefile variables
 	$(info Variable settings:)
 	$(info PACKAGE: $(PACKAGE))
 	$(info CONTAINER OS: $(CONTAINER_OS))
 	$(info CONTAINER_NAME: $(CONTAINER_NAME))
 	$(info VERTICA_VERSION: $(VERTICA_VERSION))
 	$(info CONTAINER_TAG: $(CONTAINER_TAG))
-
-.PHONY: rpm_build
-# Defining ${SUFFIX} makes it easier to try variations on the Dockerfile_RPM
-rpm_build: $(PACKAGE) display Dockerfile_RPM${SUFFIX}
-	$(info VERTICA_RPM: $(PACKAGE))
-	$(info CONTAINER_OS_VERSION: $(CONTAINER_OS_VERSION))
-	docker build \
-		-f Dockerfile_RPM${SUFFIX} \
-		--build-arg RPM=$(PACKAGE) \
-		--build-arg os_version=$(CONTAINER_OS_VERSION) \
-		--build-arg vertica_version=$(VERTICA_VERSION) \
-		--tag $(CONTAINER_TAG) .
-	touch .rpm_dockerimage
-
-# deb files are ar-archives containing tarfiles
-# unlike cpio, tar does not take wildcards in the list of files
-# to be extracted, so we have to do the translation from wild-card to
-# concrete file list by hand
-deb-file-extract-list: $(PACKAGE) file-patterns make-deb-file-extract-list
-	sh ./make-deb-file-extract-list $(PACKAGE)
-
-.PHONY: deb_build
-# Defining ${SUFFIX} makes it easier to try variations on the Dockerfile_DEB
-deb_build: $(PACKAGE) display deb-file-extract-list Dockerfile_DEB${SUFFIX}
-	$(info VERTICA_DEB: $(PACKAGE))
-	$(info CONTAINER_OS_VERSION: $(CONTAINER_OS_VERSION))
-	docker build \
-		-f Dockerfile_DEB${SUFFIX} \
-		--build-arg DEB=$(PACKAGE) \
-		--build-arg os_version=$(CONTAINER_OS_VERSION) \
-		--build-arg vertica_version=$(VERTICA_VERSION) \
-		--tag $(CONTAINER_TAG) .
-	touch .deb_dockerimage
-
-vsdk-cp vsdk-g++ vsdk-make: vsdk-bash
-	rm -f $@ ; ln vsdk-bash $@
-
-.PHONY: commands
-commands: vsdk-cp vsdk-g++ vsdk-make
+	@:
 
 # we'll need the pathname of this working directory when
 # testing with vsdk-make
 THIS_DIR := $(realpath .)
 
 .PHONY: test
-test: commands
+test:
 	rm -rf tmp-test
 	mkdir tmp-test
-	VERTICA_VERSION=$(VERTICA_VERSION) \
-		./vsdk-cp -r /opt/vertica/sdk/examples tmp-test
+	# test vsdk-cp to copy examples from container to local dir
+	./vsdk-cp -r /opt/vertica/sdk/examples tmp-test
+	# test building stuff in local dir
 	cd tmp-test/examples && \
-		VERTICA_VERSION=$(VERTICA_VERSION) \
 		$(THIS_DIR)/vsdk-make \
 			ScalarFunctions \
 			TransformFunctions \
 			AnalyticFunctions \
 			AggregateFunctions \
 			UserDefinedLoad
+	# do objects exist?
+	ls -l tmp-test/examples/build/ScalarFunctions.so
+	ls -l tmp-test/examples/build/TransformFunctions.so
+	ls -l tmp-test/examples/build/AnalyticFunctions.so
+	ls -l tmp-test/examples/build/AggregateFunctions.so
+	ls -l tmp-test/examples/build/IconverterLib.so
+	# clean up
+	rm -rf tmp-test
+	# test vsdk-bash and verify path is valid
+	./vsdk-bash -c 'IFS=:; for i in $$PATH; do ls -ld $$i >/dev/null || exit 1; done'
+
+.PHONY:push
+push: ## push built container up to docker hub
+	docker push $(CONTAINER_TAG)
