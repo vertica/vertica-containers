@@ -19,13 +19,31 @@
 # The container is meant to be invoked by the vsdk-* family of
 # commands, which mount many of the user's directories and prepare a
 # command such as bash, make, or g++ to be executed inside this
-# container. 
+# container.
+
+# secret debug option
+if [[ -n $VERTICA_DEBUG_ENTRYPOINT ]] ; then
+  set -x
+fi
+
+#
+# The default is to enter the container as dbadmin, so if they are specifying
+# -u, don't do anything special
+#
+vsdk_cmd="$1"
+if [[ $(id -un 2>/dev/null) != dbadmin || $vsdk_cmd != vertica ]]; then
+  exec "$@"
+fi
+
+source /etc/profile
 
 VSQL=/opt/vertica/bin/vsql
-vsdk_dir="$1"
-vsdk_cmd="$2"
 
 ADMINTOOLS="${VERTICA_OPT_DIR}/bin/admintools"
+: ${VERTICA_OPT_DIR:="/opt/vertica"}
+: ${VERTICA_VOLUME_DIR:="/data"}
+: ${VERTICA_DATA_DIR:="${VERTICA_VOLUME_DIR}/vertica"}
+: ${VERTICA_DB_NAME:="vsdk"}
 
 # Vertica should be shut down properly
 function shut_down() {
@@ -37,11 +55,11 @@ function shut_down() {
 
 function vertica_proper_shutdown() {
     db=$(${ADMINTOOLS} -t show_active_db)
-    case "$db"x in
-        x) 
+    case "$db" in
+        ("")
             echo "Database not running --- shutting down"
             ;;
-        *)
+        (*)
             echo 'Vertica: Closing active sessions'
             ${VSQL} -c 'SELECT CLOSE_ALL_SESSIONS();'
             echo 'Vertica: Flushing everything on disk'
@@ -55,47 +73,36 @@ function vertica_proper_shutdown() {
 function preserve_config() {
     # unfortunately, admintools doesn't (always) obey symlinks when
     # manipulating its admintools.conf file, so we have to move the
-    # entire config directory  
-    if [ -f ${VERTICA_DATA_DIR}/config/admintools.conf ]; then
-        # second and subsequent times starting the container
-        # we have an admintools.conf in ${VERTICA_DATA_DIR}
-        echo "config has already been preserved"
-    else
+    # entire config directory
+    if ! [[ -f ${VERTICA_DATA_DIR}/config/admintools.conf ]]; then
         # first time through docker-entrypoint.sh we need to move
         # the config directory to persistent store
-        echo "Moving config directory tree to persistent store"
-        sudo cp --archive ${VERTICA_OPT_DIR}/config ${VERTICA_DATA_DIR}
-        sudo chown -R ${VERTICA_DB_USER} ${VERTICA_DATA_DIR}/config
+        /bin/sudo cp --archive ${VERTICA_OPT_DIR}/config ${VERTICA_DATA_DIR}
+        /bin/sudo chown -R ${VERTICA_DB_USER} ${VERTICA_DATA_DIR}/config
     fi
     # unfortunately, the symlink is in the container image
-    # so we have to renew it each time
+    # so we have to renew it each time if a shared volume is used for $VERTICA_VOLUME_DIR
     if [ ! -L ${VERTICA_OPT_DIR}/config ]; then
         echo "symlink ${VERTICA_OPT_DIR}/config -> ${VERTICA_DATA_DIR}/config"
-        rm -rf ${VERTICA_OPT_DIR}/config
-        ln -s  ${VERTICA_DATA_DIR}/config  ${VERTICA_OPT_DIR}/config
+        sudo rm -rf ${VERTICA_OPT_DIR}/config
+        sudo ln -snf  ${VERTICA_DATA_DIR}/config  ${VERTICA_OPT_DIR}/config
     fi
-}       
+}
 
 function initialize_vertica_directories() {
-    # We only do this if necessary
-    if [ ! -d ${VERTICA_DATA_DIR}/${VERTICA_DB_NAME} ]; then
-        # first time through --- create db, etc.
-        mkdir -p ${VERTICA_DATA_DIR}/config
-        preserve_config
-        echo 'Creating database'
+    # first time through --- create db, etc.
+    mkdir -p ${VERTICA_DATA_DIR}/config
+    preserve_config
+    echo 'Creating database'
 
-        ${ADMINTOOLS} -t create_db \
-                      --skip-fs-checks \
-                      -s localhost \
-                      --database=$VERTICA_DB_NAME \
-                      --catalog_path=${VERTICA_DATA_DIR} \
-                      --data_path=${VERTICA_DATA_DIR}
+    ${ADMINTOOLS} -t create_db \
+                  --skip-fs-checks \
+                  -s localhost \
+                  --database=$VERTICA_DB_NAME \
+                  --catalog_path=${VERTICA_DATA_DIR} \
+                  --data_path=${VERTICA_DATA_DIR}
 
-        echo
-        if [ -n "${APP_DB_USER}" ]; then
-            create_app_db_user
-        fi
-    fi
+    echo
 }
 
 function start_vertica() {
@@ -119,21 +126,17 @@ function start_vertica() {
 # A container that runs commands like cp, bash, gcc, make, etc., is
 # used to provide an environment for those commands to execute in.
 # When the command completes, the container goes away.
-case $vsdk_cmd in
-    vertica*)
-        STOP_LOOP=false
-        trap "shut_down" SIGKILL SIGTERM SIGHUP SIGINT
-        initialize_vertica_directories
-        start_vertica
-       
-        while [ "${STOP_LOOP}" == "false" ]; do
-            # We could use admintools -t show_active_db to see if the
-            # db is still running, and restart it if it isn't
-            sleep 10
-        done
-        ;;
-    *)
-        cd "$vsdk_dir"
-        sh -c "$vsdk_cmd"
-        ;;
-esac
+STOP_LOOP=false
+trap "shut_down" SIGKILL SIGTERM SIGHUP SIGINT
+
+if [ ! -d ${VERTICA_DATA_DIR}/${VERTICA_DB_NAME} ]; then
+  initialize_vertica_directories
+else
+  start_vertica
+fi
+
+while [ "${STOP_LOOP}" == "false" ]; do
+    # We could use admintools -t show_active_db to see if the
+    # db is still running, and restart it if it isn't
+    sleep 10
+done
