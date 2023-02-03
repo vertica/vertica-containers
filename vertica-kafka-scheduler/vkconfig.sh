@@ -71,7 +71,7 @@ if ! [[ -d $LOG_DIR ]] || [[ -w $LOG_DIR ]]; then # use /opt/vertica/log if it e
 fi
 dockeropts+=( -v "$PWD/log:/opt/vertica/log" )
 
-exec docker run -i "${dockeropts[@]}" \
+exec docker run --rm -i "${dockeropts[@]}" \
     --user $(perl -E '@s=stat "'"$LOG_DIR"'"; say "$s[4]:$s[5]"') \
         vertica/kafka-scheduler vkconfig "${vkconfigopts[@]}"
 
