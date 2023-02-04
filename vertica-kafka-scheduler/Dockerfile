@@ -10,6 +10,8 @@ RUN rm -rf /opt/vertica/packages/kafka/bin/kafkacat /opt/vertica/packages/kafka/
 COPY java /opt/vertica/java
 
 RUN touch /etc/vkconfig.conf
+RUN touch /etc/keystore.jks
+RUN touch /etc/truststore.jks
 
 RUN adduser -D -s /bin/bash vksched
 USER vksched

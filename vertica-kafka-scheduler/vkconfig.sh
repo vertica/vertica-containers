@@ -41,6 +41,30 @@ for opt in $VKCONFIG_OPTS "$@"; do
   vkconfigopts+=("$opt")
 done
 
+# map keystore and trustore file inside docker
+for jopt in $VKCONFIG_JVM_OPTS; do
+  case "$jopt" in
+    (-Dlog4j.configurationFile=*)
+      # the vkconfig script provides a more convenient way of passing this file in
+      LOG_CONFIG=${jopt%%-Dlog4j.configurationFile=}
+      ;;
+    (-Djavax.net.ssl.keyStore=)
+      dockeropts+=( -v "$(abspath "${jopt%%-Djavax.net.ssl.keyStore=}"):/etc/keystore.jks" )
+      NEW_VKCONFIG_JVM_OPTS+="-Djavax.net.ssl.keyStore=/etc/keystore.jks "
+      ;;
+    (-Djavax.net.ssl.trustStore=)
+      dockeropts+=( -v "$(abspath "${jopt%%-Djavax.net.ssl.trustStore=}"):/etc/truststore.jks" )
+      NEW_VKCONFIG_JVM_OPTS+="-Djavax.net.ssl.trustStore=/etc/truststore.jks "
+      ;;
+    (*)
+      NEW_VKCONFIG_JVM_OPTS+="$jopt "
+      ;;
+  esac
+done
+if [[ -n $NEW_VKCONFIG_JVM_OPTS ]]; then
+  dockeropts+=( -e VKCONFIG_JVM_OPTS="$NEW_VKCONFIG_JVM_OPTS" )
+fi
+
 function fail {
   echo "$@" >&2
   exit 1;
