@@ -106,9 +106,12 @@ CONTAINER_NAME = vertica/verticasdk
 export CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS)-v$(VERTICA_VERSION)
 
 build: display Dockerfile_$(TARGET_U) ${SUFFIX} ## Build container given PACKAGE=<file>
+	# link/copy rpm file to local directory and clean it up when done
+	@ln $(PACKAGE) vertica.$$$$.rpm 2>/dev/null || cp $(VERTICA_RPM) vertica.$$$$.rpm || exit 1 \
+	trap "rm -f vertica.$$$$.rpm" EXIT INT; \
 	docker build \
 		-f Dockerfile_$(TARGET_U)${SUFFIX} \
-		--build-arg $(TARGET_U)=$(PACKAGE) \
+		--build-arg $(TARGET_U)=vertica.$$$$.rpm \
 		--build-arg os_version=$(CONTAINER_OS_VERSION) \
 		--build-arg vertica_version=$(VERTICA_VERSION) \
 		--tag $(CONTAINER_TAG) .
