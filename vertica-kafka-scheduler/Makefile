@@ -1,4 +1,4 @@
-# Makefile for vertica-demo
+# Makefile for vertica-kafka-scheduler
 
 VERTICA_INSTALL?=/opt/vertica
 VERTICA_VERSION?=$(shell awk 'match($$1, /Version=(.*)/) { print substr($$1, RSTART+8, RLENGTH-8) }' $(VERTICA_INSTALL)/packages/kafka/package.conf 2>/dev/null || echo latest)
