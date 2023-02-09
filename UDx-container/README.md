@@ -145,7 +145,7 @@ Use the `vsdk-make` script to execute your Makefile and compile your UDx. This s
    ```shell 
    $ VERTICA_VERSION=<vertica-version> OSTAG=ubuntu vsdk-make TARGET=deb
    ```
-   Alternatively, use `VSDK_ENV` to pass a file that contains the environment variables:
+   Additionally, you can use `VSDK_ENV` to pass a file that contains the environment variables:
    ```shell
    $ VSDK_ENV=env-vars-file vsdk-make
    ```
