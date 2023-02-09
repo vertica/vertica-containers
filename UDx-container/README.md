@@ -114,13 +114,7 @@ This repository provides `vsdk-*` scripts to help you test and compile your UDx 
 | `vsdk-g++` | Executes the g++ compiler in the UDx container. |
 | `vsdk-make` | Executes `make` in the current working directory in the UDx container. This allows you to develop UDxs locally and compile them with the tools available in the UDx container. |
 
-You will likely use `vsdk-make` the most often. It behaves exactly like `make`, but it compiles your files in the development environment mounted in the UDx container.
-
-These scripts use the contents of `/etc/os-release` to determine whether the container has a `centos` or `ubuntu` tag. If your host uses a different distribution than your development environment, you can edit `vsdk-bash` directly to change the default setting. Alternatively, you can change the default interactively by defining the OSTAG [environment variable](#environment-variables) when you execute `vsdk-make`:
-
-```shell
-$ OSTAG=ubuntu vsdk-make
-```
+These scripts use the contents of `/etc/os-release` to determine whether the container has a `centos` or `ubuntu` tag. If your host uses a different distribution than your development environment, you can edit `vsdk-bash` directly to change the default setting. Alternatively, you can change the default interactively by defining the `OSTAG` [environment variable](#environment-variables) when you execute `vsdk-make`. For details,see [Compile UDxs](#compile-udxs).
 
 ## Environment variables
 
@@ -135,13 +129,26 @@ The following table describes the environment variables that you can set to prov
 
 ## Compile UDxs
 
-After you [test your UDx container](#testing-the-container), you can develop UDxs in the current working directory on the host machine and compile them in the UDx container. Use the `vsdk-make` script to execute your Makefile and compile your UDx. In a new environment, `vsdk-make` mounts the same directories as the `make test` command.
+After you [test your UDx container](#test-the-udx-container), you can develop UDxs in the current working directory on the host machine and compile them in the UDx container.
 
-The following command passes a file containing [environment variables](#environment-variables):
+Use the `vsdk-make` script to execute your Makefile and compile your UDx. This script behaves exactly like `make`, but it compiles your files in the development environment mounted in the UDx container:
 
-```shell
-$ VSDK_ENV=env-vars-file vsdk-make
-```
+1. Add `UDx-container` repository to the `PATH` so you can execute the `vsdk-*` scripts from your development directory:
+   ```shell 
+   $ export PATH=/path/to/vertica-containers/UDx-container:$PATH
+   ```
+2. Change into your UDx development directory:
+   ```shell 
+   $ cd /path/to/dev-dir
+   ```
+3. Run `vsdk-make` with the required environment variables:
+   ```shell 
+   $ VERTICA_VERSION=<vertica-version> OSTAG=ubuntu vsdk-make TARGET=deb
+   ```
+   Alternatively, use `VSDK_ENV` to pass a file that contains the environment variables:
+   ```shell
+   $ VSDK_ENV=env-vars-file vsdk-make
+   ```
 
 ## Mount additional files 
 
