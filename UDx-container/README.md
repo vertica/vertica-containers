@@ -114,7 +114,14 @@ This repository provides `vsdk-*` scripts to help you test and compile your UDx 
 | `vsdk-g++` | Executes the g++ compiler in the UDx container. |
 | `vsdk-make` | Executes `make` in the current working directory in the UDx container. This allows you to develop UDxs locally and compile them with the tools available in the UDx container. |
 
-These scripts use the contents of `/etc/os-release` to determine whether the container has a `centos` or `ubuntu` tag. If your host uses a different distribution than your development environment, you can edit `vsdk-bash` directly to change the default setting. Alternatively, you can change the default interactively by defining the `OSTAG` [environment variable](#environment-variables) when you execute `vsdk-make`. For details,see [Compile UDxs](#compile-udxs).
+These scripts use the contents of `/etc/os-release` to determine whether the container has a `centos` or `ubuntu` tag. If your host uses a different distribution than your development environment, you can edit `vsdk-bash` directly to change the default setting.
+
+Alternatively, you can interactively define the operating system with the `OSTAG` [environment variable](#environment-variables) when you execute `vsdk-make`. To simplify this workflow, you can create a shell alias that defines `OSTAG`:
+
+```shell
+alias vsdk-make='OSTAG=path/to/vsdk-make'
+```
+For additional details, see [Compile UDxs](#compile-udxs).
 
 ## Environment variables
 
