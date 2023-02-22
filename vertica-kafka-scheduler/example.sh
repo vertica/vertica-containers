@@ -8,6 +8,7 @@ cd "$(dirname ${BASH_SOURCE[0]})" || exit $?
 source ./.env || exit $?
 NETWORK=${COMPOSE_PROJECT_NAME}_example
 : ${VERTICA_VERSION:=v12.0.3}
+export VERTICA_K8S_VERSION=${VERTICA_VERSION#v}-0-minimal
 
 ########################
 # Debugging and Colors #
@@ -83,6 +84,7 @@ docker run \
   -v $PWD/example.conf:/etc/vkconfig.conf \
   -v $PWD/vkafka-log-config-debug.xml:/opt/vertica/packages/kafka/config/vkafka-log-config.xml \
   -v $PWD/log:/opt/vertica/log \
+  --user $(id -u):$(id -g) \
   --network $NETWORK \
   vertica/kafka-scheduler:$VERTICA_VERSION bash -c "
     echo 'Creating scheduler schema' ; \
