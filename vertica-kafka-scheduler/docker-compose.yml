@@ -1,48 +1,38 @@
 version: "2"
 
 networks:
-  scheduler:
+  example:
     driver: bridge
 
 services:
   zookeeper:
     image: docker.io/bitnami/zookeeper:latest
     networks:
-      - scheduler
+      - example
 #    ports:
 #      - "2181:2181"
-    volumes:
-      - "zookeeper_data:/bitnami"
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
   kafka:
     image: docker.io/bitnami/kafka:latest
     networks:
-      - scheduler
+      - example
 #    ports:
 #      - "9092:9092"
-    volumes:
-      - "kafka_data:/bitnami"
     environment:
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
   vertica:
-    image: docker.io/vertica/vertica-k8s
+    image: docker.io/vertica/vertica-k8s:$VERTICA_K8S_VERSION
 # Emulate x86 on Apple's M1 chip (demo purposes only)
 #    platform: linux/amd64
     networks:
-      - scheduler
+      - example
     #ports:
 #      - "5433:5433"
 #      - "5444:5444"
 #    environment:
 # This is important for Apple's M1 chip
 #      - VERTICA_MEMDEBUG=2
-
-volumes:
-  zookeeper_data:
-    driver: local
-  kafka_data:
-    driver: local

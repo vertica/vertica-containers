@@ -18,4 +18,10 @@ bool udx_call_func_2i_1i(const int a,
                          int *place_to_put_result,
                          void* ws,
                          char** place_to_put_errormsg_ptr);
+
+// 1 ull arg; 1 ull return value
+bool udx_call_func_ull_ull(const unsigned long long a,
+                         unsigned long long *place_to_put_result,
+                         void* ws,
+                         char** place_to_put_errormsg_ptr);
 #endif // udx_wasm_h

@@ -264,3 +264,24 @@ bool udx_call_func_2i_1i(int a, int b, int *result, void* v_ws, char** error) {
     *result = results_val[0].of.i32;
     return true;
 }
+
+// This is a specialized function for wasm functions that take one
+// unsigned long long argument and return an unsigned long long
+bool udx_call_func_ull_ull(const unsigned long long a,
+                           unsigned long long *result,
+                           void* v_ws,
+                           char** error) {
+    struct wasm_state* ws = (struct wasm_state*) v_ws;
+    wasm_val_t args_val[1] = { WASM_I64_VAL(a) };
+    wasm_val_t results_val[1] = { WASM_INIT_VAL };
+    wasm_val_vec_t args = WASM_ARRAY_VEC(args_val);
+    wasm_val_vec_t results = WASM_ARRAY_VEC(results_val);
+
+    if (wasm_func_call(ws->func, &args, &results)) {
+        *error = "> Error calling the `sum` function!";
+        return false;
+    }
+    *error = NULL;
+    *result = results_val[0].of.i64;
+    return true;
+}

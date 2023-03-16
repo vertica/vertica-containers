@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+# -*- mode: shell-script -*-
+
+# (c) Copyright [2021] Micro Focus or one of its affiliates.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Since this script is a wrapper for other commands (which have their
+# own command-line arguments that we don't want to interfere with),
+# most of the option-setting for this script is done using environment
+# variables.
+#
+# For example, $OSTAG-v$VERTICA_VERSION is used to define the docker image
+# (e.g., vertica/verticasdk:centos-v11.0.0).  So, if you have multiple
+# verticavsdk images lying around, you can select among them by
+# defining these variables in the environment.
+#
+# VSDK_IMAGE: select your docker image directly
+# OSTAG: one of { centos, ubuntu } --- selects the docker image OS
+#       version (presumably different from the host operating system,
+#       as otherwise the script just picks it up from
+#       /etc/os-release).
+# VERTICA_VERSION: something like 11.0.0-0
+#
+# In addition, there are these environment variables:
+#
+# VSDK_MOUNT: an optional space-separated list of host directories to
+#       mount in the UDx container --- that is, "I'm going to want to
+#       refer to files in these directories in, for example, my
+#       makefile, or as include directories in code to be compiled"
+#
+# VSDK_ENV: names a file filled with variable definitions.  This uses
+#       the --env-file option of the "docker run" command, so the file
+#       needs to be formatted for that option
+
+PROG=`basename $0`
+CMD=${PROG##*vsdk-}
+if [[ $CMD == exec ]]; then
+  CMD=$1
+  shift
+fi
+
+if [[ -z $VSDK_IMAGE ]]; then
+  if [[ -z $OSTAG ]]; then
+    # The user can default the OS selection by defining OSTAG in the
+    # environment (mostly for testing)
+    . /etc/os-release
+
+    case $ID in
+      (rhel) OSTAG=centos ;;
+      (ubuntu) OSTAG=ubuntu ;;
+      (*) OSTAG=centos ;;
+    esac
+    WARNINGS+=("WARNING: Guessing OSTAG $OSTAG. Set VSDK_IMAGE to avoid this warning")
+  fi
+
+  if [[ -z $VERTICA_VERSION ]]; then
+    # try to guess Vertica version
+    VERTICA_VERSION=$(echo $(vsql -Xtc "select regexp_replace((select version()),'.*v(\d+\.\d+\.\d+).*','\1');" 2>/dev/null))
+    WARNINGS+=("WARNING: Guessing vertica version $VERTICA_VERSION. Set VSDK_IMAGE to avoid this warning")
+  fi
+
+  if [[ -n $OSTAG && -n $VERTICA_VERSION ]]; then
+    VSDK_IMAGE=vertica/verticasdk:$OSTAG-v$VERTICA_VERSION
+  else
+    # Is there only one image?  Let's just print a warning.
+    VSDK_IMAGE=:$(docker image ls vertica/verticasdk --format "{{.Repository}}:{{.Tag}}")
+    if [[ $VSDK_IMAGE =~ ^vertica/verticasdk:(centos|ubuntu)-v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$ ]]; then
+      WARNINGS+=("WARNING: Using image $IMAGE. Set VSDK_IMAGE to avoid this warning")
+    else
+      echo "ERROR: Set VSDK_IMAGE to vertica/verticasdk:<OSTAG>-v<VERTICA_VERSION>" >&2
+      exit 1
+    fi
+  fi
+fi
+
+# we didn't error out, so print the warnings.
+for w in "${WARNINGS[@]}"; do echo $w >&2; done
+
+declare -a DOCKER_ARGS
+
+if [[ -t 0 ]]; then
+  DOCKER_ARGS+=(-it)
+fi
+
+for dir in $VSDK_MOUNT; do
+  DOCKER_ARGS+=(-v "$dir:$dir")
+done
+
+if [[ -n $VSDK_ENV ]]; then
+  DOCKER_ARGS+=(--env-file $VSDK_ENV)
+fi
+
+# sometimes it's useful to run vsdk-bash (especially) as dbadmin
+# e.g., to look at the vertica.log in the catalog directory
+if [[ $CMD == vertica ]]; then
+    : ${PORTOFFSET:=$(( RANDOM % 10000 ))}
+    : ${CONTAINER_NAME:=verticasdk}
+    DOCKER_ARGS+=(
+      -u 1000:1000
+      --security-opt=seccomp:unconfined
+      --privileged
+      --name $CONTAINER_NAME
+      -p $(( PORTOFFSET + 5433 )):5433 \
+      -p $(( PORTOFFSET + 5444 )):5444 \
+    )
+
+    echo
+    echo "Run"
+    echo "      docker logs $CONTAINER_NAME"
+    echo "to view startup progress"
+    echo
+    echo "Don't stop container until above command prints 'Vertica is now running'"
+    echo "To stop, hit ctrl-c or run"
+    echo "    docker stop $CONTAINER_NAME"
+    echo
+    echo "When executing outside of a VSDK container, you can connect to this vertica"
+    echo "using"
+    echo "    vsql -p $(( PORTOFFSET + 5433 ))" -U dbadmin
+    echo
+    echo "If executing inside the container, just 'vsql' should suffice"
+else
+  DOCKER_ARGS+=(
+    -v "$HOME:$HOME:rw"
+    -u $(id -u):$(id -g)
+  )
+fi
+
+if [[ -n $VERTICA_DEBUG_ENTRYPOINT ]]; then
+  DOCKER_ARGS+=(-e "VERTICA_DEBUG_ENTRYPOINT=$VERTICA_DEBUG_ENTRYPOINT ")
+fi
+
+DOCKER_COMMAND=( docker run
+                --rm
+                --hostname "UDXbuilder"
+                -v "$HOME:$HOME:rw"
+                -v "$PWD:$PWD:rw"
+                -w "$PWD"
+                "${DOCKER_ARGS[@]}"
+                "$VSDK_IMAGE"
+                "$CMD" "$@"
+)
+
+if [[ -n $VSDK_DEBUG ]]; then
+  printf "%q " "${DOCKER_COMMAND[@]}"
+  echo
+fi
+
+${DOCKER_COMMAND[@]} 

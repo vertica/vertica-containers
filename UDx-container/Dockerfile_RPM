@@ -44,11 +44,10 @@ COPY ./tools/init.d.functions /etc/rc.d/init.d/functions
 
 # Install prerequisites and Vertica
     # Update is needed to be confident that we're picking up
-    # fixed libraries.  We depend on malware check of container afterwards 
+    # fixed libraries.  We depend on malware check of container afterwards
 # this creates multiple layers, but the many layers will be taken care of
 # when we switch to the next stage of the build
-RUN bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then yum install -q -y dnf-plugins-core; yum -q config-manager --set-enabled powertools; yum -q -y install glibc-locale-source; fi" 
- # Create DB user and group in OS. Fix their ID, so they match in the following stage
+RUN bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then yum install -q -y dnf-plugins-core; yum -q config-manager --set-enabled powertools; yum -q -y install glibc-locale-source; fi"
 RUN yum -q -y update \
     && yum -y update --security \
     && yum -q -y makecache \
@@ -75,22 +74,23 @@ RUN yum -q -y update \
         sudo \
         sysstat \
         wget \
-        which 
+        which
 
+# Install Vertica package
 RUN yum localinstall -q -y /tmp/$RPM
  # Cleanup to optimize the size of final image
-RUN rm -rf ${VERTICA_OPT_DIR}/lib64 
+RUN rm -rf ${VERTICA_OPT_DIR}/lib64
 
  # CentOS 8 - fixes issue "Unsupported locale character encoding: use
- # a utf8 locale, not a ANSI_X3.4-1968 locale" 
-RUN bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then localedef -i en_US -f UTF-8 en_US.UTF-8; fi" 
+ # a utf8 locale, not a ANSI_X3.4-1968 locale"
+RUN bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then localedef -i en_US -f UTF-8 en_US.UTF-8; fi"
 # Create DB user in OS and create python egg cache dir under this user
 # Run install_vertica script to prepare environment
 RUN mkdir -p ${VERTICA_DATA_DIR} \
      && /usr/sbin/groupadd -r -g $dbadmin_gid $vertica_db_group \
      # While it is true that install_vertica creates $vertica_db_user
      # and $vertica_db_group we do it by hand here in order to be able
-     # to specify the UID of the $vertica_db_user  
+     # to specify the UID of the $vertica_db_user
      && /usr/sbin/useradd -r \
                           -m \
                           -s /bin/bash \
@@ -113,8 +113,6 @@ RUN mkdir -p ${VERTICA_DATA_DIR} \
                       --point-to-point \
                       --no-ssh-key-install \
                       -U
-
-COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
 
 RUN chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \
     && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
@@ -170,7 +168,7 @@ RUN set -x \
                           $vertica_db_user \
     && su - $vertica_db_user -c "mkdir $PYTHON_EGG_CACHE" \
 # Install prerequisites, create Vertica data dir, set privileges, document
-# fix timezone issue and generate locales in case of centOS 8 
+# fix timezone issue and generate locales in case of centOS 8
     && yum -q -y update \
     && yum -y update --security \
     && yum -q -y makecache \
@@ -183,11 +181,15 @@ RUN set -x \
  # CentOS 8
  && bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then yum install -q -y dnf-plugins-core; yum -q config-manager --set-enabled powertools; yum -q -y install glibc-locale-source; localedef -i en_US -f UTF-8 en_US.UTF-8; fi" \
      && yum install -y \
+        # Install the same things from the builder
         cronie \
         dialog \
+        gcc-c++ \
+        glibc-static \
         gdb \
         iproute \
         libstdc++-static \
+        make \
         mcelog \
         openssh-server \
         openssh-clients \
@@ -227,43 +229,42 @@ RUN set -x \
         expat \
         flex \
         gcc \
-        gcc-c++ \
         gettext \
         glibc-devel \
         glibc-headers \
         glibc-static \
         glibc-utils \
+        less \
         imake \
         libcurl-devel \
         "libgfortran-*" \
         "libgomp-*" \
         libtool \
         libacl-devel \
-        make \
         nasm \
         # TODO: should use Vertica's own openssl headers, except
         # that we don't put them into the RPM
         openssl-devel \
         readline-devel \
-        sudo \
         tar \
+        vim \
         && yum clean all \
         && rm -rf /var/cache/yum \
-     # Allow passwordless sudo access from dbadmin
-     && echo "$vertica_db_user ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers \
+     # Allow passwordless sudo access from any user
+     && echo "ALL ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers \
      # docker daemons versions < 19.03 don't preserve ownership on COPY --from
      # so we have to chown these things again
      && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_DATA_DIR} \
          && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
          && chmod 755 ${VERTICA_HOME_DIR} \
      # but this chown is expensive in image-size, so we use aother
-     # trick in the first half of the build 
+     # trick in the first half of the build
      # && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \
  # Link OS timezones, check entrypoint script
  # && rm -rf ${VERTICA_OPT_DIR}/share/timezone \
  # && ln -sT /usr/share/zoneinfo ${VERTICA_OPT_DIR}/share/timezone \
          && yum clean all \
-         && rm -rf /var/cache/yum 
+         && rm -rf /var/cache/yum
 
 # Enable devtoolset by default for users
 RUN ln -s /opt/rh/devtoolset-7/enable /etc/profile.d/enable-devtools.sh \
@@ -275,13 +276,17 @@ RUN ln -s /opt/rh/devtoolset-7/enable /etc/profile.d/enable-devtools.sh \
 # Vertica is installed.  But we threw the 900-1200 MB of rpm info away
 # when we did the multi-stage build.  v11 and subsequent used a
 # different technique more compatible with what we're doing with
-# containers 
+# containers
 ADD ./tools/vertica_agent.11 /tmp/
 ADD ./tools/vertica_agent_patch.sh /tmp/
 RUN bash /tmp/vertica_agent_patch.sh
 
 ADD ./env_setup/vertica_env.sh /etc/profile.d/
 COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
+
+#overwrite path in /etc/environment for non-root users
+RUN echo PATH="/opt/vertica/bin:/opt/rh/devtoolset-7/root/usr/bin:/opt/rh/devtoolset-7/root/usr/libexec/gcc/x86_64-redhat-linux/7:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" > /etc/environment
+ENV PATH="/opt/vertica/bin:/opt/rh/devtoolset-7/root/usr/bin:/opt/rh/devtoolset-7/root/usr/libexec/gcc/x86_64-redhat-linux/7:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # DB is running under vertica_db_user, not under root
 USER $vertica_db_user

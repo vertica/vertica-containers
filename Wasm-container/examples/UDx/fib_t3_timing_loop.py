@@ -76,46 +76,42 @@ conn_info = {'host': '127.0.0.1',
              }
 
 
-cwasmlib = f"'{CWD}/build/cWasmUDx.so'"
-nonwasmlib = f"'{CWD}/build/nonWasmUDx.so'"
-rustwasmlib = f"'{CWD}/build/rustWasmUDx.so'"
+cfiblib = f"'{CWD}/build/cFibUDx.so'"
+nonfiblib = f"'{CWD}/build/nonFibUDx.so'"
+rustfiblib = f"'{CWD}/build/rustFibUDx.so'"
 
 prologue = [
-    f"CREATE OR REPLACE LIBRARY cwasmudx AS {cwasmlib} LANGUAGE 'C++'",
-    f"CREATE OR REPLACE LIBRARY nonwasmudx AS {nonwasmlib} LANGUAGE 'C++'",
-    f"CREATE OR REPLACE LIBRARY rustwasmudx AS {rustwasmlib} LANGUAGE 'C++'",
-    f"CREATE OR REPLACE FUNCTION nonWasmUDx_sumFactory AS LANGUAGE 'C++' NAME 'nonWasmUDx_sumFactory' LIBRARY nonwasmudx NOT FENCED",
-    f"CREATE OR REPLACE FUNCTION rustWasmUDx_sumFactory AS LANGUAGE 'C++' NAME 'rustWasmUDx_sumFactory' LIBRARY rustwasmudx NOT FENCED",
-    f"CREATE OR REPLACE FUNCTION cWasmUDx_sumFactory AS LANGUAGE 'C++' NAME 'cWasmUDx_sumFactory' LIBRARY cwasmudx NOT FENCED",
+    f"CREATE OR REPLACE LIBRARY cfibudx AS {cfiblib} LANGUAGE 'C++'",
+    f"CREATE OR REPLACE LIBRARY nonfibudx AS {nonfiblib} LANGUAGE 'C++'",
+    f"CREATE OR REPLACE LIBRARY rustfibudx AS {rustfiblib} LANGUAGE 'C++'",
+    f"CREATE OR REPLACE FUNCTION nonFibUDx_fibFactory AS LANGUAGE 'C++' NAME 'nonFibUDx_fibFactory' LIBRARY nonfibudx NOT FENCED",
+    f"CREATE OR REPLACE FUNCTION rustFibUDx_fibFactory AS LANGUAGE 'C++' NAME 'rustFibUDx_fibFactory' LIBRARY rustfibudx NOT FENCED",
+    f"CREATE OR REPLACE FUNCTION cFibUDx_fibFactory AS LANGUAGE 'C++' NAME 'cFibUDx_fibFactory' LIBRARY cfibudx NOT FENCED",
     f'DROP TABLE IF EXISTS ct4', 
     f'DROP TABLE IF EXISTS rt4',
     f'DROP TABLE IF EXISTS nt4',
     f'DROP TABLE IF EXISTS st4',
-    f"select start_session_trace('wasm', 1, 10)",
 ]
 
 Command = collections.namedtuple('Command', ['label', 'command', 'cleanup'])
 
 timed_commands = [
-    Command('cWasmUDx_sum 10M rows',
-            f"CREATE TABLE ct4 AS SELECT cWasmUDx_sum(c0, c1) FROM t3",
-            "DROP TABLE ct4 CASCADE"),            
-    Command('rustWasmUDx_sum 10M rows',
-            f"CREATE TABLE rt4 AS SELECT rustWasmUDx_sum(c0, c1) FROM t3",
-            "DROP TABLE rt4 CASCADE"),
-    Command('nonWasmUDx_sum 10M rows',
-            f"CREATE TABLE nt4 AS SELECT nonWasmUDx_sum(c0, c1) FROM t3",
-            "DROP TABLE nt4 CASCADE"),
-    Command('select c0 + c1',
-            f"CREATE TABLE st4 AS SELECT c0 + c1 FROM t3",
-            "DROP TABLE st4 CASCADE"),
+    Command('cFibUDx_fib from t3 10M rows',
+            f"CREATE TABLE ct5 AS SELECT cFibUDx_fib(c1) FROM t3",
+            "DROP TABLE ct5 CASCADE"),            
+    Command('rustFibUDx_from t3 fib 10M rows',
+            f"CREATE TABLE rt5 AS SELECT rustFibUDx_fib(c1) FROM t3",
+            "DROP TABLE rt5 CASCADE"),
+    Command('nonFibUDx_fib from t3 10M rows',
+            f"CREATE TABLE nt5 AS SELECT nonFibUDx_fib(c1) FROM t3",
+            "DROP TABLE nt5 CASCADE"),
 ]
 
 epilogue = [
     f'select stop_session_trace()',
 ]
 
-loop_count = 30
+loop_count = 5
 
 def report(cmd, timings):
     s = ('|'

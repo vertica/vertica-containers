@@ -21,6 +21,10 @@
 # command such as bash, make, or g++ to be executed inside this
 # container. 
 
+VERTICA_DB_USER=dbadmin
+VERTICA_DATA_DIR=/vwasmdata/vertica
+VERTICA_OPT_DIR=/opt/vertica
+
 VSQL=/opt/vertica/bin/vsql
 vsdk_dir="$1"
 vsdk_cmd="$2"
@@ -104,10 +108,13 @@ function start_vertica() {
     # recreate that symlink
     preserve_config
     echo 'Starting Database'
-    ${ADMINTOOLS} -t start_db \
+    if ${ADMINTOOLS} -t start_db \
                   --database=$VERTICA_DB_NAME \
-                  --noprompts
-
+                  --noprompts; then
+        echo "Vertica is now running"
+    else
+        echo "Admintools was unable to start Vertica"
+    fi
 }
 
 # A container that runs Vertica hangs around until Vertica exits ---

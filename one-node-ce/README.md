@@ -19,9 +19,10 @@ Container techology provides the freedom to run environments independently of th
 
 Vertica provides a Dockerfile for different distributions so that you can create an containerized environment that you are the most comfortable with. This is helpful if you need to access a container shell to perform tasks, such as administering the database with [admintools](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/AdminTools/WritingAdministrationToolsScripts.htm).
 
-## Vertica:
+## Vertica
+- 12.x
 - 11.x
-- 10.x (beta)
+- 10.x
 
 ## CentOS
 - 8.3
@@ -31,98 +32,100 @@ Vertica provides a Dockerfile for different distributions so that you can create
 - 20.04
 - 18.04
 
-Vertica tests the CentOS containers most thoroughly.  Dockerfile_Ubuntu is provided for those who have a Vertica .deb file instead of a Vertica .rpm file, and can be adapted for recent versions of Debian.
+Vertica tests the CentOS containers most thoroughly. Vertica provides the [Dockerfile_Ubuntu](./Dockerfile_Ubuntu) for users that have only a Vertica DEB file. You can adapt that Dockerfile for recent versions of Debian.
 
-# Building the image
+# How to use this image
 
 ## Store the Vertica RPM or DEB
 
 To build an image using this repository, you must store your Vertica RPM or DEB archive in the `./packages` directory.
 
-If you do not have a Vertica RPM, register to download the free [Community Edition](https://www.vertica.com/try/) license. This is a limited license that allows you to create a three-node Vertica cluster with a maximum of 1TB of storage.
+If you do not have a Vertica archive, register to download the free [Community Edition](https://www.vertica.com/try/) (CE) license. The CE license allows you to create a three-node Vertica cluster with a maximum of 1TB of storage.
 
-## Build the image with `Makefile`
-This repository contains the `Makefile` script that creates an image with a [DBADMIN role](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PredefinedRoles.htm).
+## Build the image
 
-Export the following variables to customize the image properties:
+To simplify the build process, this repository provides a [Makefile](./Makefile). It builds a base image with default image properties, but you can set environment variables to customize some properties.
 
-| Environment Variable | Description | Default Values |
-| :--------------------| :-----------| :--------------|
-| TAG          | Required tag of the image. | latest |
-| IMAGE_NAME   | Required name of the image.| vertica-ce |
-| OS_TYPE      | Required OS Type.          | CentOS | 
-| OS_VERSION   | Required OS versions.      | CentOS: 7.9.2009<br> Ubuntu: 18.04 | 
-| VERTICA_PACKAGE | Name of the .rpm or .deb file | CentOS: vertica-x86_64.RHEL6.latest.rpm<br>Ubuntu: vertica.latest.deb |
-
-> **NOTE**: If the defaults are not be suitable for your environment, edit the `Makefile` to use more appropriate defaults.
-
-If you do not specify VERTICA_PACKAGE, and TAG is not set to `latest`, then the TAG must be the Vertica version because it is used to construct the version portion of the VERTICA_PACKAGE name.
-
-### Examples:
-```shell
-# Builds image with default values.
-make 
-
-# Builds image with custom image name and tag.
-make IMAGE_NAME=one-node-ce TAG=latest
-
-# Build image with Ubuntu base OS.
-make OS_TYPE=Ubuntu Tag=latest  
-
-# Build image with a non-default filename for the rpm.
-make VERTICA_PACKAGE=vertica-11.0.0.x86_64.RHEL6.rpm
-```
-
-## Build Custom image
-
-To customize build-time variables including the default database user, and group, and database name, export following optional variables:
+The following table describes base image properties that you can customize with environment variables:
 
 | Environment Variable | Description | Default Values |
 | :--------------------| :-----------| :--------------|
-| VERTICA_DB_USER   | OS user and implicit database [superuser](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Privileges/AboutSuperuserPrivileges.htm).  | dbadmin |
-| VERTICA_DB_UID    | Vertica user uid.                        | 1000 |
-| VERTICA_DB_GROUP  | Group for database administrator users.  | verticadba | 
-| VERTICA_DB_NAME   | Vertica database name.                   | VMart | 
+| `TAG`          | Required. Image tag that represents the Vertica version. | `latest` |
+| `IMAGE_NAME`   | Required. Image name. | `vertica-ce` |
+| `OS_TYPE`      | Required. Operating system distribution.  | `CentOS` | 
+| `OS_VERSION`   | Required. Operatoring system versions. | CentOS: `7.9.2009`<br> Ubuntu: `18.04` | 
+| `VERTICA_PACKAGE` | Name of the RPM or DEB file. | CentOS: `vertica-x86_64.RHEL6.latest.rpm`<br>Ubuntu: `vertica.latest.deb` |
 
-### Example:
+> **Note**: If you do not specify `VERTICA_PACKAGE`, and `TAG` is not set to `latest`, then the `TAG` must be the Vertica version because it is used to construct the version portion of the `VERTICA_PACKAGE` name.
+
+### Examples
+
 ```shell
-make IMAGE_NAME=one-node-ce TAG=latest VERTICA_DB_USER=vertica VERTICA_DB_UID=1200
+# Default values:
+$ make
+
+# Custom image name and tag:
+$ make IMAGE_NAME=one-node-ce TAG=latest
+
+# Ubuntu base OS:
+$ make OS_TYPE=Ubuntu Tag=latest  
+
+# Custom RPM file name:
+$ make VERTICA_PACKAGE=vertica-11.0.0.x86_64.RHEL6.rpm
 ```
 
-After `Dockerfile_<distro>` installs the RPM or DEB file, it runs `tools/cleanup.sh`. `tools/cleanup.sh` trims the size of the distribution by removing less-commonly used files, and applies other file-size reduction techniques.
+### Customize the Vertica User
 
-# Testing with ./run_tests.sh
+The [Makefile](./Makefile) creates an image with a [DBADMIN role](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PredefinedRoles.htm). You can set environment variables to customize some database user properties.
 
-After you build the container, you can test it with `make test` or with the `./run_tests.sh` script. The `./run_tests.sh` script verifies that the container can execute Vertica and some of the additional libraries.
+The following table describes database user properties that you can customize with environment variables:
 
-> **IMPORTANT**: `./run_tests.sh` requires a [local copy of the vsql client](#getting-a-local-copy-of-vsql). 
+| Environment Variable | Description | Default Values |
+| :--------------------| :-----------| :--------------|
+| `VERTICA_DB_USER`   | OS user and implicit database [superuser](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Privileges/AboutSuperuserPrivileges.htm).  | `dbadmin` |
+| `VERTICA_DB_UID`    | Vertica user UID.                        | `1000` |
+| `VERTICA_DB_GROUP`  | Group for database administrator users.  | `verticadba` | 
+| `VERTICA_DB_NAME`   | Vertica database name.                   | `VMart` | 
 
-The `./run_tests.sh` script uses the normal Vertica port number, so you must stop any existing Vertica server (container or otherwise) on your test system before you test your container.
-
-The test uses your image to create a new container with a unique tag and volume. Because the test sets up the optional libraries and creates the VMart database, creating a new container can take up to three minutes.
-
-If the tests pass, `All tests passed` appears at the end of the output, and the script exits with a 0 exit status. If the test fails with errors, the output contains `ERROR: <description>`, where `<description>` is a description of the error.
-
-You can run the script with the `-k` argument to retain the container and make it available for examination after testing:
+For example:
 
 ```shell
-./run-test.sh -k
+$ make IMAGE_NAME=one-node-ce TAG=latest VERTICA_DB_USER=vertica VERTICA_DB_UID=1200
+```
+## Test the image
+
+After you [build the image](#build-the-image), test it with the [run_tests.sh](./run-tests.sh) script. You can use the `make test` target to run `run_tests.sh`, or you can run the script directly.
+
+> **IMPORTANT**: The script uses the Vertica port number `5433`. You must stop any existing Vertica server on your test system before you test your container.
+
+### Test output
+
+Passing tests: `All tests passed` is displayed at the end of the output, and the script exits with a `0` exit status.
+
+Failed tests: The output describes the error in the following format: `ERROR: <description>`.
+
+### Debug errors
+
+You can run the script with the `-k` argument to retain the container and examine it after testing:
+
+```shell
+$ ./run-test.sh -k
 ```
 
 When you are done with the container, you must manually remove it:
 
 ```shell
-docker stop vertica_ce_<suffix>
-docker rm vertica_ce_<suffix>
-docker volume rm vertica-test-<suffix>
+$ docker stop vertica_ce_<suffix>
+$ docker rm vertica_ce_<suffix>
+$ docker volume rm vertica-test-<suffix>
 ```
-In the previous command, `<suffix>` refers to the numeric suffix (the PID of the test-script shell that created the container and its volume). When used with the `-k` flag, `run-test.sh` prints out the above commands and populates `<suffix>`.
+In the previous command, `<suffix>` refers to the the PID of the test-script shell that created the container and its volume. The `-k` argument populates `<suffix>` automatically and logs it to the console.
 
-# How to use this image
+# Run the container
 
-## Start the Vertica server instance
+## Start with `start-vertica.sh`
 
-This repository contains the `start-vertica.sh` script with the following options:
+Start a container with the `start-vertica.sh` script and the following options:
 
 ```shell
 Usage: ./start-vertica.sh [-c cname] [-d cid_dir] [-h] [-i img_name] [-t tag] [-v hostpath:containerdir] -V docker-volume
@@ -138,148 +141,150 @@ Options are:
  -V volume - docker volume to use for the Vertica database (default is vertica-data)
 ```
 
-> **NOTE**: By default, the container name is `vertica_ce`. Use this name to identify the container in your local Docker registry, with commands like `docker start` and `docker stop`.
+> **NOTE**: By default, the container name is `vertica_ce`. Use this name to identify the container in your local Docker registry with commands like `docker start` and `docker stop`.
 
 ### cid.txt file
 
-The `start-vertica.sh` script creates the **cid.txt** file, which stores the container ID within the container. By default, **cid.txt** is stored in current working directory. You can specify a directory to place the **cid.txt** file using the `-d cid_dir` option. For example, the following command places **cid.txt** in the home directory:
+The `start-vertica.sh` script creates the **cid.txt** file that stores the container ID. By default, **cid.txt** is stored in current working directory. To change the default directory, use the `-d cid_dir` option. For example, the following command stores **cid.txt** in the `/home` directory:
 
 ```shell
-start-vertica.sh -d /home
+$ start-vertica.sh -d /home
 ```
-> **NOTE**: You must have read and write access to the `cid_dir`.
+> **NOTE**: You must have read and write access to `cid_dir`.
 
 ## Start with `docker run`
 
-You can also use `docker run` to start the server instance. In the following example, `vertica-ce:latest` is the container image you created in [Building the image](#building-the-image):
+You can also start a container with `docker run`:
 
 ```shell
-docker run -p 5433:5433 \
+$ docker run -p 5433:5433 \
            --mount type=volume,source=vertica-data,target=/data \
            --name vertica_ce \
            vertica-ce:latest
 ```
+In the preceding command:
+* `vertica-data` is a [Docker volume](https://docs.docker.com/storage/volumes/).
+* `vertica_ce` is the name of the container.
+* `vertica/vertica-ce` is the image name.
 
+### Runtime configuration
+
+When you execute `docker run`, you can inject environment variables at runtime:
+
+```shell
+$ docker run -p 5433:5433 -d \
+  -e TZ='Europe/Prague' \
+  vertica-ce:latest
+```
+
+The following table describes environment variables that you can configure at runtime:
+
+| Environment Variable | Description | 
+| :--------------------| :-----------|
+| `APP_DB_USER` | Name of a database user, in addition to `VERTICA_DB_USER`. This user is created only when this variable is set. By default, `APP_DB_USER` is assigned [pseudosuperuser](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PSEUDOSUPERUSERRole.htm) privileges. |
+| `APP_DB_PASSWORD` | Password for `APP_DB_USER`. If this is omitted, the password is empty. |
+| `TZ` | The database time zone. Setting `TZ` overrides the time zone set in your environment.<br><br>**IMPORTANT**: Vertica does not contain all time zones. Each Dockerfile contains a commented-out workaround solution that begins "Link OS time zones". Uncomment the workaround to use time zones.<br> |
+| `DEBUG_FAILING_STARTUP` | For development purposes. When you set the value to `y`, the entrypoint script does not end in case of failure, so you can investigate any failures. |
 
 ## Custom scripts
 
-The entrypoint script can run custom scripts during startup. You must store the scripts in a local directory named `.docker-entrypoint-initdb.d`. To make these scripts accessible by the entrypoint script, mount this directory in the container filesystem in `/docker-entrypoint-initdb.d/`. Scripts are executed in lexicographical order.
-
-Supported extensions include:
+The `docker-entrypoint.sh` script can run custom scripts during startup. You must store the scripts in a local directory named `.docker-entrypoint-initdb.d` and mount it in the container filesystem in `/docker-entrypoint-initdb.d/`. Scripts are executed in lexicographical order. Supported extensions include:
 - `sql`: SQL commands executed with vsql
 - `sh`: Shell scripts
 
-The following command creates a bind mount:
+For example, run custom scripts with a [bind mount](https://docs.docker.com/storage/bind-mounts/):
 
 ```shell
-docker run -p 5433:5433 \
+$ docker run -p 5433:5433 \
            --mount type=bind,source=/tmp/.docker-entrypoint-initdb.d,target=/docker-entrypoint-initdb.d/ \
            --name vertica_ce \
            vertica-ce:latest
 ```
 
-For more information, see [Use bind mounts](https://docs.docker.com/storage/bind-mounts/) in the Docker documentation.
+# Access the container filesystem
 
-## Container shell access
+> If you have a [local copy of vsql](#external-vsql-or-client), you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/AdminTools/WritingAdministrationToolsScripts.htm)
 
-If you used the `start-vertica.sh` script to [start the server instance](#start-the-vertica-server-instance), use the `run-shell-in-container.sh` script to access a shell within a container. This script uses the **cid.txt** file that the `start-vertica.sh` creates to store the container ID. In the following command, `<cid_dir>` is the directory that stores **cid.txt**:
+## Access with `run-shell-in-container.sh`
 
-```shell
-./run-shell-in-container.sh [-d directory-for-cid.txt] [-n container-name] [-u uid] [-h ] [ ? ]
-```
-
-You must specify either `-d directory-for-cid.txt` or `-n container-name`. For example, `-n vertica_ce`.
-
-`-u uid` specifies what user runs inside the container. Vertica recommends that you use DBADMIN_ID (default 1000), because that user has proper access to Vertica directories inside the container.
-
-> **NOTE**: If you have a [local copy](#getting-a-local-copy-of-vsql) of `vsql`, you do not need to access a container shell unless you need to use [admintools](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/AdminTools/WritingAdministrationToolsScripts.htm).
-
-Alternately, use the `docker exec` command to access a shell in the container. Using `docker exec` requires that you provide the container name:
+If you used the `start-vertica.sh` script to [start the container](#start-with-start-verticash), use the `run-shell-in-container.sh` script to access a shell within a container:
 
 ```shell
-docker exec -it <container name> bash -l
+$ ./run-shell-in-container.sh [-d cid_dir] [-n container-name] [-u uid] [-h ] [ ? ]
 ```
+In the preceding command:
+- `-d cid_dir` is the [cid.txt](#cidtxt-file) file that the `start-vertica.sh` creates to store the container ID.
+- `-u uid` specifies the user account inside the container. Vertica recommends that you use `DBADMIN_ID` (default 1000), because [DBADMIN](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/DBADMINRole.htm) has proper access to #customize-the-vertica-userhecontainer.
 
-After you access a shell, run `/opt/vertica/bin/vsql` to connect to the database and execute `vsql` commands on the files and volumes mounted in the container.
-
-You can access a container shell and vsql with a single command: 
+You must specify either `-d directory-for-cid.txt` or `-n container-name`. For example:
 
 ```shell
-docker exec -it <container_name> /opt/vertica/bin/vsql
+$ ./run-shell-in-container.sh -n vertica_ce
 ```
 
-## Viewing container logs
+## Access with `docker exec`
 
-Fetch the container logs with the `docker logs` command. The following command uses **cid.txt**:
+Access a shell in the container with `docker exec`. `docker exec` requires the container name:
 
 ```shell
-docker logs `cat cid.txt`
+$ docker exec -it <container name> bash -l
 ```
-The following command fetches the logs for a container named **vertica_ce**:
+
+# Persistence
+
+This container mounts a [Docker volume](https://docs.docker.com/storage/volumes/) named `vertica-data` to persist data for the Vertica database. A Docker volume provides the following advantages over a mounted host directory:
+* Cross-platform acceptance. Docker volumes are compatible with Linux, MacOS, and Microsoft Windows. 
+* The container runs with different username to user-id mappings. A container with a mounted host directory might create files that you cannot inspect or delete because they are owned by a user that is determined by the Docker daemon. 
+
+> **Note**: A Docker volume is represented on the host filesystem as a directory. These directories are created automatically and stored at `/var/lib/docker/volumes/`. Each volume is stored under `./volumename/_data/`. A small filesystem might might limit the amount of data you can store in your database.
+
+# Connect to the database 
+
+## vsql within the container
+
+After you [access a shell](#access-the-container-filesystem), run `/opt/vertica/bin/vsql` to connect to the database and execute `vsql` commands on the files and volumes mounted in the container. For example:
 
 ```shell
-docker logs vertica_ce
-```
-## Stopping the container
-
-Stop the container with the `docker stop` command. The following command uses **cid.txt**:
-
-```shell
-docker stop `cat cid.txt`
-```
-The following command stops a container named **vertica_ce**:
-
-```shell
-docker logs vertica_ce
+$ docker exec -it <container_name> /opt/vertica/bin/vsql
 ```
 
-# External database access
+## External vsql or client
 
-The container exposes port 5433 for external client access. To access the database from outside the container, you must have a [local copy of the vsql client](#getting-a-local-copy-of-vsql).
+Before you can access a Vertica database from outside the container, you must install a local copy of vsql. To download vsql and all available drivers, see [Client Drivers](https://www.vertica.com/download/vertica/client-drivers/).
 
-## Getting a local copy of vsql
+The container exposes port `5433` for external client access.
 
-See [Client Drivers](https://www.vertica.com/download/vertica/client-drivers/) in Vertica Downloads to download all available client drivers.
-
-## Accessing the database
+## Access the database
 
 By default, the Dockerfile creates the `dbadmin` user in the container database. The following command accesses the database:
+
 ```shell
-vsql -U dbadmin
+$ vsql -U dbadmin
 ```
-You can configure the database user name with the `vertica_db_user` ARG variable in the Dockerfile or when you [build the custom image](#build-custom-image).
+You can configure the database user name with the `VERTICA_DB_USER` ARG variable in the Dockerfile or when you [build the image](#customize-the-vertica-user).
 
-## Persisting data
+## View container logs
 
-This container mounts a Docker volume named **vertica-data** in the container as a persistent data store for the Vertica database. A Docker volume is used instead of a mounted host directory for the following reasons:
+Fetch the container logs with `docker logs`. Identify the container with [cid.txt](#cidtxt-file) or the container name:
 
-- Cross-platform acceptance. Docker volumes are compatible with Linux, MacOs, and Microsoft Windows.
-- The container runs with different username to user-id mappings. A container with a mounted host directory might create files that you cannot inspect or delete because they are owned by a user that is determined by the Docker daemon.
-
-For details about managing volumes, see the [Docker documentation](https://docs.docker.com/storage/volumes/).
-
-> **NOTE**: Docker volumes live on the host filesystem as directories. These directories are created automatically and stored at `/var/lib/docker/volumes/`. Each volume is stored under `./volumename/_data/`. This might limit the amount of data you can store in your database if that directory is on a small filesystem.
-
-## Extending the image
-
-The `dbadmin` user environment is extended to be user-friendly. For details, see the [vertica_env.sh](env_setup/vertica_env.sh) and [.vsqlrc](env_setup/.vsqlrc) scripts.
-
-## Environment Variables
-
-To configure various aspects of Vertica in container runtime, inject corresponding environment variables when executing the `docker run` command:
 ```shell
-docker run -p 5433:5433 -d \
-  -e TZ='Europe/Prague' \
-  vertica-ce:latest
-```
-The following table contains configurable environment variable parameters:
+# With cid.txt
+$ docker logs `cat cid.txt`
 
-| Environment Variable | Description | 
-| :--------------------| :-----------|
-| APP_DB_USER | Name of a database user, in addition to `vertica_db_user`. This user is created only when this variable is set. By default, this user is assigned [pseudosuperuser](https://www.vertica.com/docs/latest/HTML/Content/Authoring/AdministratorsGuide/DBUsersAndPrivileges/Roles/PSEUDOSUPERUSERRole.htm) privileges. |
-| APP_DB_PASSWORD | Password for APP_DB_USER. If this is omitted, the password is empty. |
-| TZ: "${VERTICA_CUSTOM_TZ:-Europe/Prague}" | The database time zone.<br><br>**IMPORTANT**: Vertica does not contain all timezones. Each Dockerfile contains a  commented-out workaround solution that begins "Link OS timezones". Uncomment the workaround to use time zones.<br>Setting the time zone with VERTICA_CUSTOM_TZ enables you to override it from your environment. |
-| DEBUG_FAILING_STARTUP | For development purposes. When you set the value to `y`, the entrypoint script does not end in case of failure, so you can investigate any failures. |
+# Fetch the logs for a container named vertica_ce:
+$ docker logs vertica_ce
+```
+# Stop the container
+
+Stop the container with `docker stop`. Identify the container with [cid.txt](#cidtxt-file) or the container name:
+
+```shell
+# With cid.txt
+$ docker stop `cat cid.txt`
+
+# Stop a container named vertica_ce
+$ docker stop vertica_ce
+```
 
 # References and Contributions
 
