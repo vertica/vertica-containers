@@ -49,7 +49,11 @@
 #	from the PACKAGE filename, if it is available there
 
 TARGET=deb
-PACKAGE = $(wildcard vertica*.deb)
+ifndef PACKAGE
+	PACKAGE := $(wildcard vertica*.deb)
+else ifndef VERTICA_VERSION
+$(error Please define VERTICA_VERSION)
+endif
 CONTAINER_OS=ubuntu
 CONTAINER_OS_VERSION ?= 20.04
 

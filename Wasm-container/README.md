@@ -87,13 +87,13 @@ For example, you might build multiple containers to develop UDxes for multiple V
 
 ## Building with a canonically-named Vertica binary
 
-The build process requires the Vertica version. The `Makefile` can extract this information automatically from a canonically-named DEB file in one of the following formats:
+The build process requires the Vertica version. The `Makefile` can extract this information automatically from a canonically-named DEB file in a format like this:
 
 ```shell
-$ vertica_12.0.1-0_amd64.deb
+vertica_12.0.1-0_amd64.deb
 ```
 
-The `Makefile` extracts the Vertica version (12.0.1-0). If the Vertica binary uses this format, run `make` to build the container. For example, the following command builds a UDx container with a canonically-named DEB file:
+The `Makefile` extracts the Vertica version (in the example above, 12.0.1-0). If the Vertica binary uses this format, run `make` to build the container. For example, the following command builds a UDx container with a canonically-named DEB file:
 
 ```shell
 $ make
@@ -101,10 +101,10 @@ $ make
 
 ## Building with variables
 
-If the RPM or DEB file does not use the canonical-naming convention, define the `VERTICA_VERSION` variable in the make command:
+If the DEB file is not canonically named (e.g., `vertica.deb`), then set the `make` `PACKAGE` variable to the name of the DEB file, and define the `VERTICA_VERSION` variable in the make command:
 
 ```shell
-$ make VERTICA_VERSION=11.0.0-0
+$ make PACKAGE=vertica.deb VERTICA_VERSION=11.0.0-0
 ```
 
 # Using the container
@@ -115,6 +115,7 @@ To use this installation, before you run the container interactively, use it to 
 
 ```shell
 # Define $WASMHOME for this inside-the-container shell
+# This is the VERTICA_VERSION used when making the container image
 export VERTICA_VERSION=12.0.1-0
 export WASMHOME=$HOME/WebAssembly
 user_id=`id -u`
@@ -190,6 +191,10 @@ when I try to use `rustc` to compile a rust file to wasm.
 
 So, there is a `./reinstall-rust` command provided to run inside the
 container to run the rust installation commands  
+
+```shell
+./reinstall-rust $WASMHOME
+```
 
 # An experiment with compiling to Wasm
 
