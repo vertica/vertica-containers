@@ -32,25 +32,32 @@ ARG vertica_db_group="verticadba"
 ARG dbadmin_gid=1000
 ARG dbadmin_id=1000
 
+ENV VERTICA_HOME_DIR="/home/$vertica_db_user"
+
 # name of .deb file
 ARG DEB
 ARG vertica_version
 
-ENV VERTICA_HOME_DIR="/home/$vertica_db_user"
-
-
 COPY $DEB /tmp/$DEB
+
+# this is a script which removes unnecessary stuff from the
+# container image
 COPY ./tools/cleanup.sh /tmp/
 COPY ./tools/package-checksum-patcher.py /tmp/
 
 # required for Ubuntu because Vertica installer insists on it
 ENV SHELL "/bin/bash"
 
-# Create DB user and group in OS. Fix their ID, so they match in the following stage
+# Install prerequisites and Vertica
+    # Update is needed to be confident that we're picking up
+    # fixed libraries.  We depend on malware check of container afterwards
+# this creates multiple layers, but the many layers will be taken care of
+# when we switch to the next stage of the build
 RUN set -x \
  && apt-get update -y \
  && apt-get upgrade --no-install-recommends -y \
  && apt-get install --no-install-recommends -yqq \
+# Packages needed to install Vertica
             bash \
             curl \
             ca-certificates \
@@ -76,7 +83,7 @@ RUN set -x \
             -s /bin/bash \
             -g $vertica_db_group \
             -u $dbadmin_id \
-            $vertica_db_user 
+            $vertica_db_user
 
 # Install Vertica package
 RUN set -x \
@@ -101,7 +108,7 @@ RUN set -x \
 
 RUN chown -R $vertica_db_user:$vertica_db_group $VERTICA_OPT_DIR \
     && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
-    && chmod 755 ${VERTICA_HOME_DIR}             
+    && chmod 755 ${VERTICA_HOME_DIR}
 
 # docker daemons versions < 19.03 don't preserve ownership on COPY --from
 # but doing the chown -R in the second half is costly in terms of
@@ -114,7 +121,7 @@ RUN sh /tmp/cleanup.sh
 ###########################################################################
 ARG os_version="18.04"
 
-FROM ubuntu:${os_version} 
+FROM ubuntu:${os_version}
 
 ARG vertica_db_user="dbadmin"
 ARG vertica_db_group="verticadba"
@@ -145,7 +152,7 @@ ADD ./tools/package-checksum-patcher.py /tmp/
 ADD ./tools/init.d.functions /etc/rc.d/init.d/functions
 
 # Install prerequisites, create Vertica data dir, document fix
-# timezone issue, set privileges, limits and generate locales  
+# timezone issue, set privileges, limits and generate locales
 RUN set -x \
  # COPY doesn't preserve the mode of the top-level
  && chmod g+w ${VERTICA_OPT_DIR} \
@@ -162,16 +169,29 @@ RUN set -x \
                       $vertica_db_user \
  && su - $vertica_db_user -c "mkdir $PYTHON_EGG_CACHE" \
 # Install prerequisites, create Vertica data dir, set privileges, document
-# fix timezone issue and generate locales in case of centOS 8 
+# fix timezone issue and generate locales in case of centOS 8
  && apt-get update -y \
  && apt-get upgrade --no-install-recommends -y \
+ # Install the same things from the builder
  && apt-get install -y \
-            autotools-dev \
+            # Install the same things from the builder
             bash \
+            curl \
+            ca-certificates \
+            dialog \
+            iproute2 \
+            libexpat1 \
+            locales \
+            ntp \
+            openssh-client \
+            openssh-server \
+            sudo \
+            sysstat \
+            # Packages needed to build Vertica UDxes
+            autotools-dev \
             binutils \
             build-essential \
             cmake \
-            dialog \
             doxygen \
             expat \
             flex \
@@ -180,7 +200,7 @@ RUN set -x \
             gcc \
             gdb \
             gettext \
-            iproute2 \
+            less \
             libacl1-dev \
             libboost-all-dev \
             libbz2-dev \
@@ -192,14 +212,10 @@ RUN set -x \
             libkeyutils1 \
             libreadline-dev \
             libtool \
-            locales \
             make \
             nasm \
-            ntp \
             openssl \
             procps \
-            sudo \
-            sysstat \
             tar \
             vim \
  && chsh -s /bin/bash root \
@@ -208,15 +224,15 @@ RUN set -x \
  && /usr/sbin/locale-gen \
  && echo "${vertica_db_user} -       nice    0" >> /etc/security/limits.conf \
  && echo "${vertica_db_user} -       nofile  65536" >> /etc/security/limits.conf \
- # Allow passwordless sudo access from dbadmin
- && echo "$vertica_db_user ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers \
+ # Allow passwordless sudo access from any user
+ && echo "ALL ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers \
      # docker daemons versions < 19.03 don't preserve ownership on COPY --from
      # so we have to chown these things again
      && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_DATA_DIR} \
      && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
      && chmod 755 ${VERTICA_HOME_DIR} \
      # but this chown is expensive in image-size, so we use aother
-     # trick in the first half of the build 
+     # trick in the first half of the build
      # && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \
  && apt remove --purge -y libpython2.7
 
@@ -225,13 +241,20 @@ RUN set -x \
 # Vertica is installed.  But we threw the 900-1200 MB of rpm info away
 # when we did the multi-stage build.  v11 and subsequent used a
 # different technique more compatible with what we're doing with
-# containers 
+# containers
 ADD ./tools/vertica_agent.11 /tmp/
 ADD ./tools/vertica_agent_patch.sh /tmp/
 RUN bash /tmp/vertica_agent_patch.sh
 
 ADD ./env_setup/vertica_env.sh /etc/profile.d/
 COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
+
+#overwrite path in /etc/environment for non-root users
+RUN echo PATH="/opt/vertica/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" > /etc/environment
+ENV PATH="/opt/vertica/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" 
+
+# this disables a warning message when the group is unknown
+RUN touch /.sudo_as_admin_successful
 
 # DB is running under vertica_db_user, not under root
 USER $vertica_db_user

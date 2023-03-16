@@ -5,10 +5,10 @@
 
 # first chose a unique project name for docker-compose
 cd "$(dirname ${BASH_SOURCE[0]})" || exit $?
-source .env || exit $?
-NETWORK=${COMPOSE_PROJECT_NAME}_scheduler
-VOLUMES="${COMPOSE_PROJECT_NAME}_zookeeper_data ${COMPOSE_PROJECT_NAME}_kafka_data"
-: ${VERTICA_VERSION:=latest}
+source ./.env || exit $?
+NETWORK=${COMPOSE_PROJECT_NAME}_example
+: ${VERTICA_VERSION:=v12.0.3}
+export VERTICA_K8S_VERSION=${VERTICA_VERSION#v}-0-minimal
 
 ########################
 # Debugging and Colors #
@@ -19,9 +19,10 @@ VOLUMES="${COMPOSE_PROJECT_NAME}_zookeeper_data ${COMPOSE_PROJECT_NAME}_kafka_da
 : ${steps=start setup run write stop clean}
 
 # see if sed can make the log output green to make it easier to diferentiate
-green='sed --unbuffered -e s/\(.*\)/\o033[32m\1\o033[39m/' # for normal output
-red='sed --unbuffered -e s/\(.*\)/\o033[31m\1\o033[39m/'   # for errors
-blue='sed --unbuffered -e s/\(.*\)/\o033[34m\1\o033[39m/'  # for log output
+esc=$'\e'
+green="sed -u -e s/\(.*\)/$esc[32m\1$esc[39m/" # for normal output
+red="sed -u -e s/\(.*\)/$esc[31m\1$esc[39m/"   # for errors
+blue="sed -u -e s/\(.*\)/$esc[34m\1$esc[39m/"  # for log output
 if ! echo | $green >/dev/null 2>&1; then
   green=cat
   red=cat
@@ -35,7 +36,6 @@ if [[ $steps =~ start ]]; then
 
 # make sure containers have been cleaned up properly
 docker-compose rm -svf >/dev/null 2>&1 || exit $?
-docker volume rm $VOLUMES 2>/dev/null | $green
 
 # start servers
 # docker-compose uses colors, so don't override
@@ -45,7 +45,13 @@ docker-compose up -d --force-recreate
 mkdir -p log
 
 # create and start a database
-docker-compose exec vertica /opt/vertica/bin/admintools -t create_db --database=example --password= --hosts=localhost | $green || exit $?
+# The OSx version of bash calls the M1 chip "arm64", but if someone updates
+# /bin/bash, then it will could use "aarch64" in $MACHTYPE
+if [[ $MACHTYPE =~ ^aarch64 ]] || [[ $MACHTYPE =~ ^arm64 ]] ; then
+  # Arm based macs crash on a memory check unless this is added
+  VERTICA_ENV+=(-e VERTICA_MEMDEBUG=2)
+fi
+docker-compose exec ${VERTICA_ENV[@]} vertica /opt/vertica/bin/admintools -t create_db --database=example --password= --hosts=localhost | $green || exit $?
 
 # create a simple table to store messages
 docker-compose exec vertica vsql -c 'create flex table KafkaFlex()' | $green || exit $?
@@ -76,8 +82,12 @@ if [[ $steps =~ setup ]]; then
 docker run \
   --rm \
   -v $PWD/example.conf:/etc/vkconfig.conf \
+  -v $PWD/vkafka-log-config-debug.xml:/opt/vertica/packages/kafka/config/vkafka-log-config.xml \
+  -v $PWD/log:/opt/vertica/log \
+  --user $(id -u):$(id -g) \
   --network $NETWORK \
   vertica/kafka-scheduler:$VERTICA_VERSION bash -c "
+    echo 'Creating scheduler schema' ; \
     vkconfig scheduler \
       --conf /etc/vkconfig.conf \
       --frame-duration 00:00:10 \
@@ -86,31 +96,37 @@ docker run \
       --eof-timeout-ms 2000 \
       --config-refresh 00:01:00 \
       --new-source-policy START \
-      --resource-pool Scheduler_pool; \
+      --resource-pool Scheduler_pool || exit $? ; \
+    echo 'Creating target table KafkaFlex' ; \
     vkconfig target --add \
       --conf /etc/vkconfig.conf \
       --target-schema public \
-      --target-table KafkaFlex; \
+      --target-table KafkaFlex || exit $? ; \
+    echo 'Setting parser to kafkajsonparser' ; \
     vkconfig load-spec --add \
       --conf /etc/vkconfig.conf \
       --load-spec KafkaSpec \
       --parser kafkajsonparser \
       --load-method DIRECT \
-      --message-max-bytes 1000000; \
+      --message-max-bytes 1000000 || exit $? ; \
+    echo 'Configuring kafka cluster as kafka:9092' ; \
     vkconfig cluster --add \
       --conf /etc/vkconfig.conf \
       --cluster KafkaCluster \
-      --hosts kafka:9092; \
+      --hosts kafka:9092 || exit $? ; \
+    echo 'Configuring 10 partions from topic KafkaTopic1 on kafka:9092' ; \
     vkconfig source --add \
       --conf /etc/vkconfig.conf \
       --source KafkaTopic1 \
       --cluster KafkaCluster \
-      --partitions 10; \
+      --partitions 10 || exit $? ; \
+    echo 'Configuring 10 partions from topic KafkaTopic2 on kafka:9092' ; \
     vkconfig source --add \
       --conf /etc/vkconfig.conf \
       --source KafkaTopic2 \
       --cluster KafkaCluster \
-      --partitions 10; \
+      --partitions 10 || exit $? ; \
+    echo 'Connecting KafkaTopic1 to table KafkaFlex' ; \
     vkconfig microbatch --add \
       --conf /etc/vkconfig.conf \
       --microbatch KafkaBatch1 \
@@ -120,7 +136,8 @@ docker run \
       --target-table KafkaFlex \
       --rejection-schema public \
       --rejection-table KafkaFlex_rej \
-      --load-spec KafkaSpec; \
+      --load-spec KafkaSpec || exit $? ; \
+    echo 'Connecting KafkaTopic2 to table KafkaFlex' ; \
     vkconfig microbatch --add \
       --conf /etc/vkconfig.conf \
       --microbatch KafkaBatch2 \
@@ -130,9 +147,11 @@ docker run \
       --target-table KafkaFlex \
       --rejection-schema public \
       --rejection-table KafkaFlex_rej \
-      --load-spec KafkaSpec; \
+      --load-spec KafkaSpec || exit $? ; \
   " | $green
-
+  if (($?)); then
+    echo "Kafka Scheduler setup failed" | $red >&2
+  fi
 fi
 #####################
 # RUN THE SCHEDULER #
@@ -180,7 +199,7 @@ docker-compose exec kafka kafka-console-consumer.sh --topic KafkaTopic1 --bootst
 delay=0
 while ! docker-compose exec vertica vsql -t -c "SELECT compute_flextable_keys_and_build_view('KafkaFlex'); SELECT Diagnosis FROM KafkaFlex_view WHERE \"Test Subject\" = '98101'" | grep Caffine >/dev/null 2>&1; do
   if ((delay++ > 20)); then
-    echo "ERROR: Should have appeared within the ~10 second frame duration." | $red
+    echo "ERROR: Should have appeared within the ~10 second frame duration." | $red >&2
     break 2
   fi
   echo "Waiting ($delay) for Kafka test message containing 'Caffine'..." | $green
@@ -200,7 +219,7 @@ docker-compose exec kafka kafka-console-consumer.sh --topic KafkaTopic2 --bootst
 delay=0
 while ! docker-compose exec vertica vsql -t -c "SELECT compute_flextable_keys_and_build_view('KafkaFlex'); SELECT Diagnosis FROM KafkaFlex_view WHERE \"Test Subject\" = '99782'" | grep Cold >/dev/null 2>&1; do
   if ((delay++ > 20)); then
-    echo "ERROR: Should have appeared within the ~10 second frame duration." | $red
+    echo "ERROR: Should have appeared within the ~10 second frame duration." | $red >&2
     break 2
   fi
   echo "Waiting ($delay) for Kafka test message containing 'Cold Feet'..." | $green
@@ -227,7 +246,7 @@ echo SHUTTING DOWN... | $green
 docker exec \
   --user $(id -u):$(id -g) \
   kafka_scheduler \
-    killall java 2>&1 | $red
+    killall java 2>&1 | $red >&2
 
 delay=0
 : ${SCHEDULER_PID=$(ps -ef | grep 'vkconfig_scheduler\ .*vkconfig launch' | awk '{ print $2 }')}
@@ -235,8 +254,8 @@ while kill -0 $SCHEDULER_PID >/dev/null 2>&1; do
   sleep 1;
   if ((delay++ > 20)); then
     # not so graceful
-    echo "Scheduler didn't stop gracefully" | $red
-    docker stop kafka_scheduler 2>&1 | $red
+    echo "Scheduler didn't stop gracefully" | $red >&2
+    docker stop kafka_scheduler 2>&1 | $red >&2
     break;
   fi
 done
@@ -255,5 +274,4 @@ if [[ $steps =~ clean ]]; then
 # docker-compose uses colors, so don't override
 #docker-compose down
 docker-compose rm -svf
-docker volume rm $VOLUMES 2>&1 | $green
 fi
