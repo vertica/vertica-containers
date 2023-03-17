@@ -63,6 +63,8 @@
 # 2) login into docker with "docker login"
 # 3) for i in *.+(deb|rpm); do make PACKAGE=$i build push; done
 
+all: build
+
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' "$(firstword $(MAKEFILE_LIST))"
 
@@ -77,7 +79,7 @@ endif
 
 # make sure there is just 1
 ifneq ($(words $(PACKAGE)),1)
-  PACKAGE = "PACKAGE - Use 'make PACKAGE=verticaXXX.xxx'"
+  $(error "Too many RPMs in directory: ${PACKAGE} - Use 'make PACKAGE=verticaXXX.xxx'")
 else
   # extract target from package
   TARGET := $(patsubst %.deb,deb,$(patsubst %.rpm,rpm,$(PACKAGE)))
@@ -107,7 +109,7 @@ export CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS)-v$(VERTICA_VERSION)
 
 build: display Dockerfile_$(TARGET_U) ${SUFFIX} ## Build container given PACKAGE=<file>
 	# link/copy rpm file to local directory and clean it up when done
-	@ln $(PACKAGE) vertica.$$$$.rpm 2>/dev/null || cp $(VERTICA_RPM) vertica.$$$$.rpm || exit 1 \
+	ln $(PACKAGE) vertica.$$$$.rpm 2>/dev/null || cp $(VERTICA_RPM) vertica.$$$$.rpm || exit 1 ; \
 	trap "rm -f vertica.$$$$.rpm" EXIT INT; \
 	docker build \
 		-f Dockerfile_$(TARGET_U)${SUFFIX} \
