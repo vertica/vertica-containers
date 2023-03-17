@@ -58,7 +58,7 @@ You can include build variables in the build process to customize the container.
 | `TARGET` | Required. The file type of the Vertica binary that you use in the build process.<br>Accepts `rpm` or `deb`. |
 | `VERTICA_VERSION` | The version number of the Vertica binary used in the build process. This value is optional for a [canonically-named Vertica binary](#building-with-a-canonically-named-vertica-binary).<br> You can use this variable to build containers for different Vertica versions. |
 
-You might build multiple containers to develop UDxs for multiple Vertica versions. To help distinguish between containers, define `OSTAG` and `VERTICA_VERSION` in the build command. If you set `OSTAG=centos` and `VERTICA_VERSION=11.0.0-0`, the full container specification is `verticasdk:centos-11.0.0-0`.
+You might build multiple containers to develop UDxs for multiple Vertica versions. To help distinguish among containers, define `OSTAG` and `VERTICA_VERSION` in the build command. If you set `OSTAG=centos` and `VERTICA_VERSION=11.0.0-0`, the full container specification is `verticasdk:centos-11.0.0-0`.
 
 ## Build with a canonically-named Vertica binary
 
@@ -138,7 +138,7 @@ The following table describes the environment variables that you can set to prov
 
 After you [test your UDx container](#test-the-udx-container), you can develop UDxs in the current working directory on the host machine and compile them in the UDx container.
 
-Use the `vsdk-make` script to execute your Makefile and compile your UDx. This script behaves exactly like `make`, but it compiles your files in the development environment mounted in the UDx container:
+We use a build process based on the `make` paradigm, with build instructions encapsulated in a `Makefile`.  Use the `vsdk-make` script to execute your `Makefile` and compile your UDx. This script behaves exactly like GNU `make`, but it compiles your files in the development environment mounted in the UDx container:
 
 1. Add `UDx-container` repository to the `PATH` so you can execute the `vsdk-*` scripts from your development directory:
    ```shell 
@@ -281,3 +281,18 @@ $ vsql -U dbadmin -f AggregateFunctions.sql
 To view `AggregateFunctions.sql` and other example library SQL files, see `/opt/vertica/sdk/examples`.
 
 For additional details about working with UDx libraries, see [User-Defined Extensions](https://www.vertica.com/docs/latest/HTML/Content/Authoring/ExtendingVertica/UsingUserDefinedExtensions.htm).
+
+## Using `run-dbadmin-shell-in-container.sh`
+
+Should the need arise to run dbadmin administrative functions such as `admintools` in the running Vertica container, we provide an additional command, `run-dbadmin-shell-in-container.sh`.
+
+`run-dbadmin-shell-in-container.sh` has the following arguments:
+
+ - `-d dir` -- specify the directory where `cid.txt` may be found
+ - `-h` -- print a help message
+ - `-n name` -- run in the container named `name`
+ - `-u N` -- use `N` (a UID as a number) for the dbadmin-id
+
+One must specify one of `-d directory` or `-n container-name`.  Otherwise, arguments are optional.
+
+When invoked, it will give you a shell executing in the same container as your Vertica server, where you may run `admintools`, read the Vertica logfile, and any other dbadmin activities that may help you debug problems with your UDx.
