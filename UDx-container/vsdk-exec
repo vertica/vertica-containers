@@ -65,8 +65,8 @@ if [[ -z $VSDK_IMAGE ]]; then
 
   if [[ -z $VERTICA_VERSION ]]; then
     # try to guess Vertica version
-    VERTICA_VERSION=$(echo $(vsql -Xtc "select regexp_replace((select version()),'.*v(\d+\.\d+\.\d+).*','\1');" 2>/dev/null))
-    WARNINGS+=("WARNING: Guessing vertica version $VERTICA_VERSION. Set VSDK_IMAGE to avoid this warning")
+    echo "ERROR: set VERTICA_VERSION"
+    exit 1
   fi
 
   if [[ -n $OSTAG && -n $VERTICA_VERSION ]]; then
@@ -100,40 +100,10 @@ if [[ -n $VSDK_ENV ]]; then
   DOCKER_ARGS+=(--env-file $VSDK_ENV)
 fi
 
-# sometimes it's useful to run vsdk-bash (especially) as dbadmin
-# e.g., to look at the vertica.log in the catalog directory
-if [[ $CMD == vertica ]]; then
-    : ${PORTOFFSET:=$(( RANDOM % 10000 ))}
-    : ${CONTAINER_NAME:=verticasdk}
-    DOCKER_ARGS+=(
-      -u 1000:1000
-      --security-opt=seccomp:unconfined
-      --privileged
-      --name $CONTAINER_NAME
-      -p $(( PORTOFFSET + 5433 )):5433 \
-      -p $(( PORTOFFSET + 5444 )):5444 \
-    )
-
-    echo
-    echo "Run"
-    echo "      docker logs $CONTAINER_NAME"
-    echo "to view startup progress"
-    echo
-    echo "Don't stop container until above command prints 'Vertica is now running'"
-    echo "To stop, hit ctrl-c or run"
-    echo "    docker stop $CONTAINER_NAME"
-    echo
-    echo "When executing outside of a VSDK container, you can connect to this vertica"
-    echo "using"
-    echo "    vsql -p $(( PORTOFFSET + 5433 ))" -U dbadmin
-    echo
-    echo "If executing inside the container, just 'vsql' should suffice"
-else
-  DOCKER_ARGS+=(
-    -v "$HOME:$HOME:rw"
-    -u $(id -u):$(id -g)
-  )
-fi
+DOCKER_ARGS+=(
+  -v "$HOME:$HOME:rw"
+  -u $(id -u):$(id -g)
+)
 
 if [[ -n $VERTICA_DEBUG_ENTRYPOINT ]]; then
   DOCKER_ARGS+=(-e "VERTICA_DEBUG_ENTRYPOINT=$VERTICA_DEBUG_ENTRYPOINT ")
@@ -148,7 +118,7 @@ DOCKER_COMMAND=( docker run
                 "${DOCKER_ARGS[@]}"
                 "$VSDK_IMAGE"
                 "$CMD" "$@"
-)
+) 
 
 if [[ -n $VSDK_DEBUG ]]; then
   printf "%q " "${DOCKER_COMMAND[@]}"
