@@ -24,19 +24,16 @@ usage_exit() {
     exit 1
 }
 
+user_name=`id -un`
+CONTAINER_NAME=verticasdk-${user_name}
+
 while getopts "d:hn:u:" opt; do
     case "$opt" in
-        d)
-            VDATA="${OPTARG}"
-            CID=`cat $VDATA/cid.txt`
-            echo directory $VDATA
-            ;;
         h)
             usage_exit
             ;;
         n) 
             CONTAINER_NAME="${OPTARG}"
-            CID=$CONTAINER_NAME
             ;;
         u)
             DBADMIN_ID="${OPTARG}"
@@ -55,12 +52,7 @@ case "$DBADMIN_ID"x in
        usage_exit
        ;;
 esac
-case "$CID"x in
-    x) echo "One of [-d directory] or [-n container-name] required"
-       usage_exit
-       ;;
-esac
 
 # open bash in the container
-docker exec -it --user $DBADMIN_ID $CID /bin/bash -l
+docker exec -it --user $DBADMIN_ID $CONTAINER_NAME /bin/bash -l
 

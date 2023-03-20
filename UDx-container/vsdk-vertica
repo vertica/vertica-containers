@@ -51,6 +51,9 @@
 # conditions, plus simplify symlinks.
 # See https://stackoverflow.com/questions/59895/how-can-i-get-the-source-directory-of-a-bash-script-from-within-the-script-itsel
 
+user_id=`id -u`
+user_name=`id -un`
+
 case $ID in
     rhel) OSTAG=${OSTAG:=centos} ;;
     ubuntu) OSTAG=${OSTAG:=ubuntu} ;;
@@ -73,8 +76,8 @@ SCRIPT_DIR="$( cd `dirname "${BASH_SOURCE[0]}"` &> /dev/null && pwd )"
 IMAGE_NAME=verticasdk
 TAG=$OSTAG-${VERTICA_VERSION:-11.0.0-0}
 
-CONTAINER_NAME=verticasdk
-DVOL=verticasdk-data 
+CONTAINER_NAME=verticasdk-${user_name}
+DVOL=verticasdk-data-${user_name}
 
 VSDK_VOLUMES=""
 if [ "$VSDK_MOUNT"x != x ]; then
@@ -88,7 +91,23 @@ if [ "$VSDK_ENV"x != x ]; then
     VSDK_ENV_FILE_OPTION="--env-file $VSDK_ENV"
 fi
 
-user_id=`id -u`
+case $OSTAG in
+centos)     
+    CONTAINER_PATH=/opt/rh/rh-nodejs8/root/usr/bin
+    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/bin
+    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/sbin
+    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/rh-git218/root/usr/bin
+    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/devtoolset-7/root/usr/bin
+    ;;
+esac
+
+CONTAINER_PATH=$CONTAINER_PATH:/usr/lib64/ccache
+CONTAINER_PATH=$CONTAINER_PATH:${BINDIR}
+CONTAINER_PATH=$CONTAINER_PATH:${ALSO_IN_PATH}
+CONTAINER_PATH=$CONTAINER_PATH:/sbin
+CONTAINER_PATH=$CONTAINER_PATH:/usr/sbin
+CONTAINER_PATH=$CONTAINER_PATH:/usr/local/bin
+CONTAINER_PATH=$CONTAINER_PATH:/usr/local/sbin
 
 function usage_exit() {
     cat <<EOF
@@ -138,7 +157,7 @@ if docker run \
        -e vUSER=$USER \
        -v "$HOME:$HOME:rw" \
        -v ${CURDIR}:${CURDIR}:rw \
-       - w "$PWD" \
+       -w "$PWD" \
        $VSDK_VOLUMES \
        $VSDK_ENV_FILE_OPTION \
        --mount type=volume,source=$DVOL,target=/data \
@@ -164,6 +183,6 @@ then
     echo "using"
     echo "    vsql -p $(( PORTOFFSET + 5433 ))" -U dbadmin
     echo
-    echo "If executing inside a VWasm container (where you did your Wasm development),"
+    echo "If executing inside a the VSDK container (e.g., using run-dbadmin-shell-in-container),"
     echo "just 'vsql' should suffice"
 fi
