@@ -322,7 +322,7 @@ This command tells Vertica the name of the factory function.  The factory functi
 The Rust UDx is loaded in the following fashion:
 
 ```sql
-\set rustlibfile '\'PATH_TO_WASM/examples/UDx/build/cWasmUDx.so\''
+\set rustlibfile '\'PATH_TO_WASM/examples/UDx/build/rustWasmUDx.so\''
 CREATE OR REPLACE LIBRARY rustWasmUDx AS :rustlibfile LANGUAGE 'C++';
 ```
 
