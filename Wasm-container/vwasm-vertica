@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+# -*- mode: shell-script -*-
+
+# (c) Copyright [2021] Micro Focus or one of its affiliates.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Unlike the other wasmsdk-* commands, this command actually has
+# command-line arguments.
+
+# However, to be consistent with the other wasmsdk-* commands, it
+# understands the same environment variables they do.
+
+# For example, $OSTAG-$VERTICA_VERSION is used to define the container
+# tag (e.g., verticasdk:centos-11.0.0-0).  So, if you have multiple
+# verticawasmsdk containers lying around, you can select among them by
+# defining these variables in the environment.
+#
+# OSTAG: one of { centos, ubuntu } --- selects the container OS
+#       version (presumably different from the host operating system,
+#       as otherwise the script just picks it up from
+#       /etc/os-release).
+# VERTICA_VERSION: something like 11.0.0-0
+#
+# In addition, there is these environment variables:
+#
+# WASMSDK_MOUNT: an optional space-separated list of host directories to
+#       mount in the UDx container --- that is, "I'm going to want to
+#       refer to files in these directories in, for example, my
+#       makefile, or as include directories in code to be compiled"
+#
+# WASMSDK_ENV: names a file filled with variable definitions.  This uses
+#       the --env-file option of the "docker run" command, so the file
+#       needs to be formatted for that option
+
+# The user can override the OS selection by defining OSTAG in the
+# environment (mostly for testing).
+# /etc/os-release doesn't exist on MacOS
+[ -r /etc/os-release ] && . /etc/os-release
+
+# Why so elaborate?  Mostly to handle various potential error
+# conditions, plus simplify symlinks.
+# See https://stackoverflow.com/questions/59895/how-can-i-get-the-source-directory-of-a-bash-script-from-within-the-script-itsel
+
+OSTAG=${OSTAG:=ubuntu} 
+BINDIR=/bin
+ALSO_IN_PATH=/usr/bin
+
+SCRIPT_DIR="$( cd `dirname "${BASH_SOURCE[0]}"` &> /dev/null && pwd )"
+. ${SCRIPT_DIR}/set_container_path
+
+IMAGE_NAME=vwasmsdk
+TAG=$OSTAG-${VERTICA_VERSION:-12.0.1-0}
+
+CONTAINER_TAG=${CONTAINER_TAG:-vwasmsdk:$OSTAG-${VERTICA_VERSION:-12.0.1-0}}
+DVOL=vwasmsdk-data 
+
+CONTAINER_NAME=vwasmsdk-vertica
+
+WASMSDK_VOLUMES=""
+if [ "$WASMSDK_MOUNT"x != x ]; then
+    for dir in $WASMSDK_MOUNT; do
+        WASMSDK_VOLUMES="$WASMSDK_VOLUMES -v $dir:$dir"
+    done
+fi
+
+WASMSDK_ENV_FILE_OPTION=""
+if [ "$WASMSDK_ENV"x != x ]; then
+    WASMSDK_ENV_FILE_OPTION="--env-file $WASMSDK_ENV"
+fi
+
+user_id=`id -u`
+
+function usage_exit() {
+    cat <<EOF
+Usage: $0 [-c cname] [-h] [-i img_name] [-t tag] [-v hostpath:containerdir] [-V docker-volume]
+Options are:
+ -c - specify container name (default is $CONTAINER_NAME)
+ -h - show help
+ -i image - specify image name (default is $IMAGE_NAME)
+ -t tag - specify the image tag (default is $TAG)
+ -v hostpath:containerdir - mount hostpath as containerdir in the 
+        container (in addition to the data docker volume)
+ -V volume - docker volume to use for the Vertica database (default is $DVOL)
+EOF
+    exit $1
+}
+
+while getopts "c:d:hi:r:t:v:V:" opt; do
+    case "$opt" in
+        c) CONTAINER_NAME="${OPTARG}"
+           ;;
+        h) usage_exit 0
+           ;;
+        i) IMAGE_NAME=${OPTARG}
+           ;;
+        t) TAG="${OPTARG}"
+           ;;
+        v) VFLAG="-v ${OPTARG}"
+           ;;
+        V) DVOL="${OPTARG}"
+           ;;
+        \?) echo "Invalid option: -$OPTARG" >&2
+            echo
+            usage_exit 1
+            ;;
+    esac
+done
+CURDIR=`/bin/pwd`
+
+PORTOFFSET=$(( RANDOM % 10000 ))
+
+echo "Starting container..."
+if docker run \
+       --security-opt=seccomp:unconfined \
+       --privileged \
+       -e PATH=$CONTAINER_PATH \
+       -e vUID=$user_id \
+       -e vUSER=$USER \
+       -v "$HOME:$HOME:rw" \
+       -v ${CURDIR}:${CURDIR}:rw \
+       $WASMSDK_VOLUMES \
+       $WASMSDK_ENV_FILE_OPTION \
+       --mount type=volume,source=$DVOL,target=/wasmdata \
+       -p $(( PORTOFFSET + 5433 )):5433 \
+       -p $(( PORTOFFSET + 5444 )):5444 \
+       -d \
+       $VFLAG \
+       --name $CONTAINER_NAME \
+       $IMAGE_NAME:$TAG \
+       ${CURDIR} \
+       vertica
+then
+    echo
+    echo "Run"
+    echo "      docker logs $CONTAINER_NAME"
+    echo "to view startup progress"
+    echo
+    echo "Don't stop container until above command prints 'Vertica is now running'"
+    echo "To stop:"
+    echo "    docker stop $CONTAINER_NAME"
+    echo
+    echo "When executing outside of a VWasm container, you can connect to this vertica"
+    echo "using"
+    echo "    vsql -p $(( PORTOFFSET + 5433 ))"
+    echo
+    echo "If executing inside a VWasm container (where you did your Wasm development),"
+    echo "just 'vsql' should suffice"
+fi
