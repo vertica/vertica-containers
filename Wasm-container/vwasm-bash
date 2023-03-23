@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# -*- mode: shell-script -*-
+
+# (c) Copyright [2021] Micro Focus or one of its affiliates.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Since this script is a wrapper for other commands (which have their
+# own command-line arguments that we don't want to interfere with),
+# most of the option-setting for this script is done using environment
+# variables.
+#
+# For example, $OSTAG-$VERTICA_VERSION is used to define the container
+# tag (e.g., vwasmsdk:ubuntu-11.0.0-0).  So, if you have multiple
+# vwasmsdk containers lying around, you can select among them by
+# defining these variables in the environment.
+#
+# VERTICA_VERSION: something like 11.0.0-0
+#
+# In addition, there is these environment variables:
+#
+# VWASM_MOUNT: an optional space-separated list of host directories to
+#       mount in the UDx container --- that is, "I'm going to want to
+#       refer to files in these directories in, for example, my
+#       makefile, or as include directories in code to be compiled"
+#
+# VWASM_ENV: names a file filled with variable definitions.  This uses
+#       the --env-file option of the "docker run" command, so the file
+#       needs to be formatted for that option
+
+PROG=`basename $0`
+
+# If you have multiple vwasm containers, you can
+# choose among them by specifying the tag, which
+# is derived from ${OSTAG}-${VERTICA_VERSION}, if those
+# variables are set in the environment.
+
+# Why so elaborate?  Mostly to handle various potential error
+# conditions, plus simplify symlinks.
+# See https://stackoverflow.com/questions/59895/how-can-i-get-the-source-directory-of-a-bash-script-from-within-the-script-itsel
+
+OSTAG=${OSTAG:=ubuntu}
+
+case $OSTAG in
+    centos)
+        BINDIR=/usr/bin 
+        ALSO_IN_PATH=/bin
+        ;;
+    ubuntu)
+        BINDIR=/bin
+        ALSO_IN_PATH=/usr/bin
+        ;;
+esac
+
+CONTAINER_TAG=${CONTAINER_TAG:-vwasmsdk:$OSTAG-${VERTICA_VERSION:-12.0.1-0}}
+
+DVOL=vwasmsdk-data 
+
+# must follow the definition of BINDIR
+SCRIPT_DIR="$( cd `dirname "${BASH_SOURCE[0]}"` &> /dev/null && pwd )"
+. ${SCRIPT_DIR}/set_container_path
+
+INTERACTIVE=
+case $PROG in
+    vwasm-bash)
+        INTERACTIVE=-it
+        CMD=${BINDIR}/bash
+        ;;
+    *)
+        echo Unknown vwasm-command: $PROG
+        echo Known commands: vwasm-bash
+        exit 1
+        ;;
+esac
+
+VWASM_VOLUMES=""
+if [ "$VWASM_MOUNT"x != x ]; then
+    for dir in $VWASM_MOUNT; do
+        VWASM_VOLUMES="$VWASM_VOLUMES -v $dir:$dir"
+    done
+fi
+
+VWASM_ENV_FILE_OPTION=""
+if [ "$VWASM_ENV"x != x ]; then
+    VWASM_ENV_FILE_OPTION="--env-file $VWASM_ENV"
+fi
+
+user_id=`id -u`
+HOSTNAME=vwasm-$USER
+
+#         --env LD_LIBRARY_PATH=/opt/vertica/lib 
+
+CURDIR=`/bin/pwd`
+
+# We need to get any quoted strings into the entrypoint.sh as quoted
+# strings.  That is, if an argument to this script has a space in it
+# entrypoint.sh needs to see it as an argument with a space in it.
+COMMAND="$CMD"
+for arg in "$@"; do
+    COMMAND="$COMMAND \"$arg\""
+done
+
+docker run \
+       $INTERACTIVE \
+       -e PATH=$CONTAINER_PATH \
+       -e vUID=$user_id \
+       -e vUSER=$USER \
+       -u $user_id \
+       -v "$HOME:$HOME:rw" \
+       -v $CURDIR:$CURDIR:rw \
+       --mount type=volume,source=$DVOL,target=/vwasmdata \
+       $VWASM_VOLUMES \
+       $VWASM_ENV_FILE_OPTION \
+       $CONTAINER_TAG \
+       $CURDIR \
+       "$COMMAND"

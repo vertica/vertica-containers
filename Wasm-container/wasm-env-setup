@@ -1,0 +1,21 @@
+#/bin/bash
+
+if [ -z "$WASMHOME" ]; then
+   echo "Please put the name of your Wasm sandbox in \$WASMHOME"
+else
+    cp -r /usr/WebAssembly/template/.cargo $WASMHOME/.cargo
+    cp -r /usr/WebAssembly/template/.wasmer $WASMHOME/.wasmer
+
+    # Teach my intereactive shell about how to find rust-releated things
+    export WASMHOME
+    export RUSTUP_HOME=${WASMHOME}/.rustup
+    export CARGO_HOME=${WASMHOME}/.cargo
+    export WASMER=${WASMHOME}/.wasmer
+    export WASMER_DIR=$WASMER
+    export PATH=$WASMER/bin:$CARGO_HOME/bin:$PATH
+
+    source $CARGO_HOME/env
+
+    # clang doesn't seem to have a built-in idea where to find wasm-ld
+    export PATH=/opt/vertica/bin:/usr/lib/llvm-15/bin:$PATH
+fi

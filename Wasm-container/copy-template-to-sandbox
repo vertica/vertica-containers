@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Copy the rust and wasmer tools from the template to
+# the current directory
+
+case $# in
+1)
+    WASMHOME=$1
+    if [ ! -d $WASMHOME ]; then
+        echo Web Assembly sandbox \"$WASMHOME\" does not exist or is not a directory
+        exit 1
+    fi
+    cp -r /usr/WebAssembly/template/.cargo $WASMHOME
+    cp -r /usr/WebAssembly/template/.wasmer $WASMHOME
+    cp /usr/WebAssembly/template/tools/wasm-env-setup $WASMHOME/.env-setup
+
+    ;;
+*)
+    echo Usage: $0 name-of-sandbox-directory
+    exit 1
+    ;;
+esac
+
+
