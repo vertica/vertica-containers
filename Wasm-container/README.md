@@ -130,7 +130,7 @@ When executing a shell inside the container, you need to set up your in-containe
 
 `wasmer` and rust installations are designed to be placed in a user's home directory.  This `copy-template-to-sandbox` command copied them to `$WASMHOME`.
 
-To set up your environment appropriately, run
+To set up your environment appropriately, each time you start `vwasm-bash` run
 ```shell
 source $WASMHOME/.env-setup
 ```
@@ -277,7 +277,7 @@ To stop:
 
 When executing outside of a VWasm container, you can connect to this vertica
 using
-    vsql -p 8331
+    vsql -p 8331 -U dbadmin
 
 If executing inside a VWasm container (where you did your Wasm development),
 just 'vsql' should suffice
