@@ -51,72 +51,13 @@
 # conditions, plus simplify symlinks.
 # See https://stackoverflow.com/questions/59895/how-can-i-get-the-source-directory-of-a-bash-script-from-within-the-script-itsel
 
-user_id=`id -u`
-user_name=`id -un`
-
-case $ID in
-    rhel) OSTAG=${OSTAG:=centos} ;;
-    ubuntu) OSTAG=${OSTAG:=ubuntu} ;;
-    *) OSTAG=${OSTAG:=centos} ;;
-esac
-case $OSTAG in
-    centos)
-        BINDIR=/usr/bin 
-        ALSO_IN_PATH=/bin
-        ;;
-    ubuntu)
-        BINDIR=/bin
-        ALSO_IN_PATH=/usr/bin
-        ;;
-esac
-
-SCRIPT_DIR="$( cd `dirname "${BASH_SOURCE[0]}"` &> /dev/null && pwd )"
-. ${SCRIPT_DIR}/set_container_path
-
-IMAGE_NAME=verticasdk
-TAG=$OSTAG-${VERTICA_VERSION:-11.0.0-0}
-
-CONTAINER_NAME=verticasdk-${user_name}
-DVOL=verticasdk-data-${user_name}
-
-VSDK_VOLUMES=""
-if [ "$VSDK_MOUNT"x != x ]; then
-    for dir in $VSDK_MOUNT; do
-        VSDK_VOLUMES="$VSDK_VOLUMES -v $dir:$dir"
-    done
-fi
-
-VSDK_ENV_FILE_OPTION=""
-if [ "$VSDK_ENV"x != x ]; then
-    VSDK_ENV_FILE_OPTION="--env-file $VSDK_ENV"
-fi
-
-case $OSTAG in
-centos)     
-    CONTAINER_PATH=/opt/rh/rh-nodejs8/root/usr/bin
-    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/bin
-    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/sbin
-    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/rh-git218/root/usr/bin
-    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/devtoolset-7/root/usr/bin
-    ;;
-esac
-
-CONTAINER_PATH=$CONTAINER_PATH:/usr/lib64/ccache
-CONTAINER_PATH=$CONTAINER_PATH:${BINDIR}
-CONTAINER_PATH=$CONTAINER_PATH:${ALSO_IN_PATH}
-CONTAINER_PATH=$CONTAINER_PATH:/sbin
-CONTAINER_PATH=$CONTAINER_PATH:/usr/sbin
-CONTAINER_PATH=$CONTAINER_PATH:/usr/local/bin
-CONTAINER_PATH=$CONTAINER_PATH:/usr/local/sbin
-
 function usage_exit() {
     cat <<EOF
 Usage: $0 [-c cname] [-h] [-i img_name] [-t tag] [-v hostpath:containerdir] [-V docker-volume]
 Options are:
- -c - specify container name (default is $CONTAINER_NAME)
+ -c - specify container name
  -h - show help
- -i image - specify image name (default is $IMAGE_NAME)
- -t tag - specify the image tag (default is $TAG)
+ -i image - specify image name
  -v hostpath:containerdir - mount hostpath as containerdir in the 
         container (in addition to the data docker volume)
  -V volume - docker volume to use for the Vertica database (default is $DVOL)
@@ -148,6 +89,77 @@ CURDIR=`/bin/pwd`
 
 PORTOFFSET=$(( RANDOM % 10000 ))
 
+user_id=`id -u`
+user_name=`id -un`
+
+if [[ -z $OSTAG ]]; then
+    # The user can default the OS selection by defining OSTAG in the
+    # environment (mostly for testing)
+    . /etc/os-release
+
+    case $ID in
+        rhel)
+            OSTAG=centos 
+            ;;
+        ubuntu)
+            OSTAG=ubuntu 
+            ;;
+        *)
+            OSTAG=centos 
+            ;;
+    esac
+fi
+
+case $OSTAG in
+    centos)
+        BINDIR=/usr/bin 
+        ALSO_IN_PATH=/bin
+        ;;
+    ubuntu)
+        BINDIR=/bin
+        ALSO_IN_PATH=/usr/bin
+        ;;
+esac
+
+if [[ -z $VSDK_IMAGE ]]; then
+  IMAGE_NAME=vertica/verticasdk
+  TAG=$OSTAG-v${VERTICA_VERSION:-11.0.0-0}
+  VSDK_IMAGE=$IMAGE_NAME:$TAG
+fi
+
+CONTAINER_NAME=verticasdk-${user_name}
+DVOL=verticasdk-data-${user_name}
+
+VSDK_VOLUMES=""
+if [ "$VSDK_MOUNT"x != x ]; then
+    for dir in $VSDK_MOUNT; do
+        VSDK_VOLUMES="$VSDK_VOLUMES -v $dir:$dir"
+    done
+fi
+
+VSDK_ENV_FILE_OPTION=""
+if [[ ! -z $VSDK_ENV ]]; then
+    VSDK_ENV_FILE_OPTION="--env-file $VSDK_ENV"
+fi
+
+case $OSTAG in
+centos)     
+    CONTAINER_PATH=/opt/rh/rh-nodejs8/root/usr/bin
+    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/bin
+    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/llvm-toolset-7.0/root/usr/sbin
+    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/rh-git218/root/usr/bin
+    CONTAINER_PATH=$CONTAINER_PATH:/opt/rh/devtoolset-7/root/usr/bin
+    ;;
+esac
+
+CONTAINER_PATH=$CONTAINER_PATH:/usr/lib64/ccache
+CONTAINER_PATH=$CONTAINER_PATH:${BINDIR}
+CONTAINER_PATH=$CONTAINER_PATH:${ALSO_IN_PATH}
+CONTAINER_PATH=$CONTAINER_PATH:/sbin
+CONTAINER_PATH=$CONTAINER_PATH:/usr/sbin
+CONTAINER_PATH=$CONTAINER_PATH:/usr/local/bin
+CONTAINER_PATH=$CONTAINER_PATH:/usr/local/sbin
+
 echo "Starting container..."
 if docker run \
        --security-opt=seccomp:unconfined \
@@ -166,7 +178,7 @@ if docker run \
        -d \
        $VFLAG \
        --name $CONTAINER_NAME \
-       $IMAGE_NAME:$TAG \
+       $VSDK_IMAGE \
        ${CURDIR} \
        vertica
 then
