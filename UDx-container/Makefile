@@ -78,11 +78,14 @@ else
 endif
 
 # make sure there is just 1
-ifneq ($(words $(PACKAGE)),1)
-  $(error "Too many RPMs in directory: ${PACKAGE} - Use 'make PACKAGE=verticaXXX.xxx'")
-else
+ifeq ($(words $(PACKAGE)),0)
+  $(error "No ${TARGET} in directory.")
+else ifeq ($(words $(PACKAGE)),1)
+  $(warning "PACKAGE is [${PACKAGE}]")	
   # extract target from package
   TARGET := $(patsubst %.deb,deb,$(patsubst %.rpm,rpm,$(PACKAGE)))
+else
+  $(error "Too many RPMs and DEBs in directory: ${PACKAGE} - Use 'make PACKAGE=verticaXXX.xxx'")
 endif
 
 ifeq ($(TARGET), rpm)
