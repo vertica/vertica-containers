@@ -41,7 +41,7 @@ The Vertica UDx container packages the binaries, libraries, and compilers requir
 
 In addition, this repository provides `vsdk-*` commmand line tools to simplify the development process. You can develop UDxs on your host machine, compile them within the UDx container, and then save the object files on your host machine to load into Vertica.
 
-For example, the `vsdk-vertica` command launches a container with a running Vertica instance. You can use this container to load and test your UDx.
+In addition, the `vsdk-vertica` command launches a container with a running Vertica instance. You can use this container to load and test your UDx without interfering with your production system.
 
 # Build the UDx container
 
@@ -60,7 +60,7 @@ You can include build variables in the build process to customize the container.
 
 You might build multiple containers to develop UDxs for multiple Vertica versions. To help distinguish among containers, define `OSTAG` and `VERTICA_VERSION` in the build command. If you set `OSTAG=centos` and `VERTICA_VERSION=11.0.0-0`, the full container specification is `verticasdk:centos-11.0.0-0`.
 
-## Build with a canonically-named Vertica binary
+## Building with a canonically-named Vertica binary
 
 The build process requires the Vertica version. The `Makefile` can extract this information automatically from a canonically-named RPM or DEB file in one of the following formats:
 
@@ -119,7 +119,7 @@ These scripts use the contents of `/etc/os-release` to determine whether the con
 Alternatively, you can interactively define the operating system with the `OSTAG` [environment variable](#environment-variables) when you execute `vsdk-make`. To simplify this workflow, you can create a shell alias that defines `OSTAG`:
 
 ```shell
-alias vsdk-make='OSTAG=path/to/vsdk-make'
+alias vsdk-make='OSTAG=ubuntu path/to/vsdk-make'
 ```
 For additional details, see [Compile UDxs](#compile-udxs).
 
