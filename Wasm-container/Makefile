@@ -74,6 +74,8 @@ DEFAULT:
 		OS_VERSION=$(CONTAINER_OS_VERSION) \
 		SUFFIX=${SUFFIX}
 
+all: deb_build vwasm_bash setup_toolbox
+
 .PHONY: display
 display: 
 	$(info Variable settings:)
@@ -103,3 +105,8 @@ deb_build: display deb-file-extract-list Dockerfile${SUFFIX}
 		--tag $(CONTAINER_TAG) .
 	touch .deb_dockerimage
 
+vwasm_bash: vwasm_bash.template
+	sed "s/++DEFAULT_VERTICA_VERSION++/${VERTICA_VERSION}" $< > $@
+
+setup_toolbox: setup_toolbox.template
+	sed "s/++DEFAULT_VERTICA_VERSION++/${VERTICA_VERSION}" $< > 
