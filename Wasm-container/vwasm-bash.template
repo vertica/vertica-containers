@@ -62,6 +62,8 @@ case $OSTAG in
         ;;
 esac
 
+# Makefile substitutes the container's VERTICA_VERSION for
+# ++DEFAULT_VERTICA_VERSION++
 CONTAINER_TAG=${CONTAINER_TAG:-vwasmsdk:$OSTAG-${VERTICA_VERSION:-++DEFAULT_VERTICA_VERSION++}}
 
 DVOL=vwasmsdk-data 
@@ -74,7 +76,7 @@ INTERACTIVE=
 case $PROG in
     vwasm-bash)
         INTERACTIVE=-it
-        CMD=${BINDIR}/bash
+        CMD="${BINDIR}/bash --init-file $WASMHOME/.env-setup"
         ;;
     *)
         echo Unknown vwasm-command: $PROG
