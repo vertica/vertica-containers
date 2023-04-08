@@ -92,43 +92,24 @@ $ make PACKAGE=vertica.deb VERTICA_VERSION=11.0.0-0
 
 # Using the container
 
-## Setting up your Web Assembly toolbox
+## Setting up your Web Assembly environment and toolbox
 
-To use this installation, before you run the container interactively, have it run the shell script `/usr/WebAssembly/tools/copy-template-to-sandbox` with an argument specifying the location of your WebAssembly toolbox (referred to as `$WASMHOME` in the commands illustrated below).
+### `setup-toolbox`
 
-The following set of commands illustrate how one might set up one's Wasm environment and then invoke the `/usr/WebAssembly/tools/copy-template-to-sandbox` script inside the container:
+To use this installation, before you run the container interactively, run set your `WASMHOME` environment variable to the name of a directory in your `$HOME` directory.  With this environment variable set, run `setup-toolbox` to copy the template Rust (`.cargo`) and Wasmer (`.wasmer`) direcotries into `$WASMHOME`.  Putting these into `$WASMHOME` instead of your home directory avoids interfering with any non-wasm Rust work you might be doing.  It also creates the `$HOME/WebAssembly/.env-setup` file, which is used by `vwasm-bash` as a startup profile.
 
 ```shell
-# Define $WASMHOME for this inside-the-container shell
-# This is the VERTICA_VERSION used when making the container image
-export VERTICA_VERSION=12.0.1-0
 export WASMHOME=$HOME/WebAssembly
-user_id=`id -u`
-export 
-if [ ! =d $WASMHOME ]; then
-    mkdir $WASMHOME
-fi 
-docker run \
-        -e HOME \
-        -u $user_id \
-        -v $HOME:$HOME:rw \
-        vwasmsdk:ubuntu-$VERTICA_VERSION \
-        $WASMHOME \
-        "/usr/WebAssembly/template/tools/copy-template-to-sandbox $WASMHOME"
+./setup-toolbox
 ```
-(The arguments to `docker` will be explained in detail in the next section.)
 
-The above puts the `.cargo` and `.wasmer` directories into `$WASMHOME`.  Putting these into `$WASMHOME` instead of your home directory avoids interfering with any non-wasm Rust work you might be doing.  It also creates the `$HOME/WebAssembly/.env-setup` file.
+After you have used `setup-toolbox` to create your `$WASMHOME` toolbox, you can run the container interactively.
 
-After you have used the above command to create your `$WASMHOME` toolbox, you can run the container interactively.
-
-## Launching an interactive shell to do Web Assembly development
+### Launching an interactive shell to do Web Assembly development
 
 The shell-script `./vwasm-bash` starts an interactive shell inside the container.  
 
-When executing a shell inside the container, you need to set up your in-container PATH so the shell can find the `wasmer` and `rust` installations in the container.
-
-`wasmer` and rust installations are designed to be placed in a user's home directory.  This `copy-template-to-sandbox` command copied them to `$WASMHOME`.
+`./vwasm-bash` uses `$WASMHOME/.env-setup` to set up your in-container PATH so the shell can find the `wasmer` and `rust` installations in the container.
 
 To set up your environment appropriately, each time you start `vwasm-bash` run
 ```shell
@@ -145,14 +126,20 @@ source $WASMHOME/.env-setup
 
 If you have multiple vwasm containers, you can choose among them by specifying the tag, which is derived from `vwasmsdk:${OSTAG}-${VERTICA_VERSION}`, if those variables are set in the environment (you can also define `CONTAINER_TAG` if you've chosen a different container tagging scheme).
 
+For example, `vwasm-bash` has a built-in default `$VERTICA_VERSION` that matches the Vertica version used to build the container.  If you need to use a different Vertica version number (e.g., if you have multiple vwasm containers) you can override this default by:
+
+```shell
+VERTICA_VERSION=11.0.0-0 ./vwasm-bash
+```
+
 `vwasm-bash` creates a shell with the following directories mounted, sharing the name they have in the host system:
 
 - `$HOME`
+- `$WASMHOME`
 - your currently connected directory
 - any directories listed in the environment variable `$VWASM_VOLUMES`
 
 In addition, a Docker volume is mounted as `/vwasmdata`.
-
 
 ### An annoying thing about Rust
 
@@ -162,11 +149,12 @@ Rust and wasmer are designed to be installed privately, in one's home directory.
 
 While we play games in the Dockerfile with installing those tools in `/usr/WebAssembly/template`, and provide a script to copy them into one's home directory, the changes don't always seem to stick between container invocations.  This can manifests as the following:
 
+```shell
    error: toolchain 'stable-x86_64-unknown-linux-gnu' is not installed
-
+```
 when you try to use `rustc` to compile a rust file to wasm.
 
-There is a `./reinstall-rust` command provided to run inside the container to run the rust installation commands  
+There is a `./reinstall-rust` command provided to run inside the container (that is, in your interactive `vwasm-bash` shell) to repeat the rust installation commands  
 
 ```shell
 ./reinstall-rust $WASMHOME
