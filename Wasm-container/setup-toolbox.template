@@ -14,6 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+if [[ -z "$WASMHOME" ]]; then
+    echo "Please define the WASMHOME environment variable to point"
+    echo "to the directory containing your Wasm tools"
+    exit 1
+fi
+
 OSTAG=${OSTAG:=ubuntu}
 
 # ALSO_IN_PATH will be used in set_container_path
@@ -28,6 +34,8 @@ case $OSTAG in
         ;;
 esac
 
+# Makefile substitutes the container's VERTICA_VERSION for
+# ++DEFAULT_VERTICA_VERSION++
 CONTAINER_TAG=${CONTAINER_TAG:-vwasmsdk:$OSTAG-${VERTICA_VERSION:-++DEFAULT_VERTICA_VERSION++}}
 
 # must follow the definition of BINDIR
@@ -41,7 +49,7 @@ export WASMHOME=$HOME/WebAssembly
 user_id=`id -u`
 CURDIR=`/bin/pwd`
 
-if [ ! =d $WASMHOME ]; then
+if [ ! -d $WASMHOME ]; then
     mkdir $WASMHOME
 fi 
 
@@ -52,12 +60,11 @@ docker run \
        -u $user_id \
        -v "$HOME:$HOME:rw" \
        -v $CURDIR:$CURDIR:rw \
+       -v $WASMHOME:$WASMHOME:rw \
        --mount type=volume,source=$DVOL,target=/vwasmdata \
        $VWASM_VOLUMES \
        $VWASM_ENV_FILE_OPTION \
        $CONTAINER_TAG \
        $CURDIR \
-       vwasmsdk:ubuntu-$VERTICA_VERSION \
-       $WASMHOME \
        "/usr/WebAssembly/template/tools/copy-template-to-sandbox $WASMHOME"
 
