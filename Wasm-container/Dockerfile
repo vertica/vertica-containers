@@ -243,7 +243,6 @@ ADD ./tools/vertica_agent.11 /tmp/
 ADD ./tools/vertica_agent_patch.sh /tmp/
 RUN bash /tmp/vertica_agent_patch.sh
 
-ADD ./env_setup/vertica_env.sh /etc/profile.d/
 COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
 
 ##################################################################
