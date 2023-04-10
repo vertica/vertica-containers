@@ -96,7 +96,7 @@ $ make PACKAGE=vertica.deb VERTICA_VERSION=11.0.0-0
 
 ### `setup-toolbox`
 
-To use this installation, before you run the container interactively, run set your `WASMHOME` environment variable to the name of a directory in your `$HOME` directory.  With this environment variable set, run `setup-toolbox` to copy the template Rust (`.cargo`) and Wasmer (`.wasmer`) direcotries into `$WASMHOME`.  Putting these into `$WASMHOME` instead of your home directory avoids interfering with any non-wasm Rust work you might be doing.  It also creates the `$HOME/WebAssembly/.env-setup` file, which is used by `vwasm-bash` as a startup profile.
+To use this installation, before you run the container interactively, set your `WASMHOME` environment variable to the name of a directory in your `$HOME` directory.  With this environment variable set, run `setup-toolbox` to copy the template Rust (`.cargo`) and Wasmer (`.wasmer`) direcotries into `$WASMHOME`.  Putting these into `$WASMHOME` instead of your home directory avoids interfering with any non-wasm Rust work you might be doing.  It also creates the `$WASMHOME/.env-setup` file, which is used by `vwasm-bash` as a startup profile.
 
 ```shell
 export WASMHOME=$HOME/WebAssembly
@@ -109,12 +109,7 @@ After you have used `setup-toolbox` to create your `$WASMHOME` toolbox, you can 
 
 The shell-script `./vwasm-bash` starts an interactive shell inside the container.  
 
-`./vwasm-bash` uses `$WASMHOME/.env-setup` to set up your in-container PATH so the shell can find the `wasmer` and `rust` installations in the container.
-
-To set up your environment appropriately, each time you start `vwasm-bash` run
-```shell
-source $WASMHOME/.env-setup
-```
+`./vwasm-bash` uses `$WASMHOME/.env-setup` as an init-file to set up your in-container PATH so the shell can find the `wasmer` and `rust` installations in the container.
 
 `vwasm-bash` has some defaults that may be overridden by setting environment variables. 
 
