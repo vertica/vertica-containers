@@ -66,13 +66,7 @@ endif
 CONTAINER_NAME = vwasmsdk
 CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS)-$(VERTICA_VERSION)
 
-DEFAULT:
-	$(MAKE) deb_build \
-		PACKAGE=$(PACKAGE) \
-		TARGET=$(TARGET) \
-		VERTICA_VERSION=$(VERTICA_VERSION) \
-		OS_VERSION=$(CONTAINER_OS_VERSION) \
-		SUFFIX=${SUFFIX}
+DEFAULT: vwasm-bash setup-toolbox .deb_build_done 
 
 .PHONY: display
 display: 
@@ -91,8 +85,10 @@ deb-file-extract-list: $(PACKAGE) file-patterns make-deb-file-extract-list
 	sh ./make-deb-file-extract-list $(PACKAGE)
 
 .PHONY: deb_build
+deb_build: .deb_build_done
+
 # Defining ${SUFFIX} makes it easier to try variations on the Dockerfile
-deb_build: display deb-file-extract-list Dockerfile${SUFFIX}
+.deb_build_done: deb-file-extract-list Dockerfile${SUFFIX} 
 	$(info VERTICA_DEB: $(PACKAGE))
 	$(info CONTAINER_OS_VERSION: $(CONTAINER_OS_VERSION))
 	docker build \
@@ -103,3 +99,13 @@ deb_build: display deb-file-extract-list Dockerfile${SUFFIX}
 		--tag $(CONTAINER_TAG) .
 	touch .deb_dockerimage
 
+vwasm-bash: vwasm-bash.template
+	sed "s/++DEFAULT_VERTICA_VERSION++/${VERTICA_VERSION}/" $< > $@
+	chmod +x $@
+
+setup-toolbox: setup-toolbox.template
+	sed "s/++DEFAULT_VERTICA_VERSION++/${VERTICA_VERSION}/" $< > $@
+	chmod +x $@
+
+.PHONY: clean
+clean:

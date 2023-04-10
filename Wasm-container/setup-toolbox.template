@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# -*- mode: shell-script -*-
+
+# (c) Copyright [2023] OpenText or one of its affiliates.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+if [[ -z "$WASMHOME" ]]; then
+    echo "Please define the WASMHOME environment variable to point"
+    echo "to the directory containing your Wasm tools"
+    exit 1
+fi
+
+OSTAG=${OSTAG:=ubuntu}
+
+# ALSO_IN_PATH will be used in set_container_path
+case $OSTAG in
+    centos)
+        BINDIR=/usr/bin 
+        ALSO_IN_PATH=/bin
+        ;;
+    ubuntu)
+        BINDIR=/bin
+        ALSO_IN_PATH=/usr/bin
+        ;;
+esac
+
+# Makefile substitutes the container's VERTICA_VERSION for
+# ++DEFAULT_VERTICA_VERSION++
+CONTAINER_TAG=${CONTAINER_TAG:-vwasmsdk:$OSTAG-${VERTICA_VERSION:-++DEFAULT_VERTICA_VERSION++}}
+
+# must follow the definition of BINDIR
+SCRIPT_DIR="$( cd `dirname "${BASH_SOURCE[0]}"` &> /dev/null && pwd )"
+. ${SCRIPT_DIR}/set_container_path
+
+# Define $WASMHOME for this inside-the-container shell
+# This is the VERTICA_VERSION used when making the container image
+export VERTICA_VERSION=++DEFAULT_VERTICA_VERSION++
+export WASMHOME=$HOME/WebAssembly
+user_id=`id -u`
+CURDIR=`/bin/pwd`
+
+if [ ! -d $WASMHOME ]; then
+    mkdir $WASMHOME
+fi 
+
+docker run \
+       -e PATH=$CONTAINER_PATH \
+       -e vUID=$user_id \
+       -e vUSER=$USER \
+       -u $user_id \
+       -v "$HOME:$HOME:rw" \
+       -v $CURDIR:$CURDIR:rw \
+       -v $WASMHOME:$WASMHOME:rw \
+       --mount type=volume,source=$DVOL,target=/vwasmdata \
+       $VWASM_VOLUMES \
+       $VWASM_ENV_FILE_OPTION \
+       $CONTAINER_TAG \
+       $CURDIR \
+       "/usr/WebAssembly/template/tools/copy-template-to-sandbox $WASMHOME"
+
