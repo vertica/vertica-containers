@@ -1,5 +1,5 @@
 #!/bin/bash
-# © Copyright 2022 Micro Focus or one of its affiliates
+# © Copyright 2022 Open Text
 #
 # This script file wraps a containerized vkconfig.
 # Requires readlink but tries to make due without.
