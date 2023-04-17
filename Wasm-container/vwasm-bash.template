@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # -*- mode: shell-script -*-
 
-# (c) Copyright [2021] Micro Focus or one of its affiliates.
+# (c) Copyright [2021-2023] Open Text.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -50,6 +50,7 @@ PROG=`basename $0`
 
 OSTAG=${OSTAG:=ubuntu}
 
+# ALSO_IN_PATH will be used in set_container_path
 case $OSTAG in
     centos)
         BINDIR=/usr/bin 
@@ -61,7 +62,9 @@ case $OSTAG in
         ;;
 esac
 
-CONTAINER_TAG=${CONTAINER_TAG:-vwasmsdk:$OSTAG-${VERTICA_VERSION:-12.0.1-0}}
+# Makefile substitutes the container's VERTICA_VERSION for
+# ++DEFAULT_VERTICA_VERSION++
+CONTAINER_TAG=${CONTAINER_TAG:-vwasmsdk:$OSTAG-${VERTICA_VERSION:-++DEFAULT_VERTICA_VERSION++}}
 
 DVOL=vwasmsdk-data 
 
@@ -73,7 +76,7 @@ INTERACTIVE=
 case $PROG in
     vwasm-bash)
         INTERACTIVE=-it
-        CMD=${BINDIR}/bash
+        CMD="${BINDIR}/bash --init-file $WASMHOME/.env-setup"
         ;;
     *)
         echo Unknown vwasm-command: $PROG

@@ -1,5 +1,5 @@
 # -*- mode: shell-script -*-
-# (c) Copyright [2021] Micro Focus or one of its affiliates.
+# (c) Copyright [2021-2023] Open Text.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # You may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -243,7 +243,6 @@ ADD ./tools/vertica_agent.11 /tmp/
 ADD ./tools/vertica_agent_patch.sh /tmp/
 RUN bash /tmp/vertica_agent_patch.sh
 
-ADD ./env_setup/vertica_env.sh /etc/profile.d/
 COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
 
 ##################################################################
