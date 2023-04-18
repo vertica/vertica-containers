@@ -77,6 +77,11 @@ The `Makefile` extracts the Vertica version (`10.1.1-5`) and the OS distribution
 ```shell
 $ make TARGET=rpm
 ```
+If there is more than one RPM (or DEB) file in the directory, you will have to specify which one to use using the PACKAGE variable:
+
+```shell
+make PACKAGE=verticaXXX.rpm
+```
 
 ## Build with variables
 

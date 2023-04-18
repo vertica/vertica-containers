@@ -87,12 +87,13 @@ deb-file-extract-list: $(PACKAGE) file-patterns make-deb-file-extract-list
 .PHONY: deb_build
 deb_build: .deb_build_done
 
-# Defining ${SUFFIX} makes it easier to try variations on the Dockerfile
-.deb_build_done: deb-file-extract-list Dockerfile${SUFFIX} 
+# Defining ${DOCKERFILE_SUFFIX} makes it easier to try variations on
+# the Dockerfile  
+.deb_build_done: deb-file-extract-list Dockerfile${DOCKERFILE_SUFFIX} 
 	$(info VERTICA_DEB: $(PACKAGE))
 	$(info CONTAINER_OS_VERSION: $(CONTAINER_OS_VERSION))
 	docker build \
-		-f Dockerfile${SUFFIX} \
+		-f Dockerfile${DOCKERFILE_SUFFIX} \
 		--build-arg DEB=$(PACKAGE) \
 		--build-arg os_version=$(CONTAINER_OS_VERSION) \
 		--build-arg vertica_version=$(VERTICA_VERSION) \
@@ -106,6 +107,9 @@ vwasm-bash: vwasm-bash.template
 setup-toolbox: setup-toolbox.template
 	sed "s/++DEFAULT_VERTICA_VERSION++/${VERTICA_VERSION}/" $< > $@
 	chmod +x $@
+
+push: ## push built container up to docker hub
+	docker push $(CONTAINER_TAG)
 
 .PHONY: clean
 clean:

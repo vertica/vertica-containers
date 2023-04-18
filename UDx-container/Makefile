@@ -95,7 +95,7 @@ ifeq ($(TARGET), rpm)
 else ifeq ($(TARGET), deb)
   TARGET_U=DEB
   CONTAINER_OS=ubuntu
-  CONTAINER_OS_VERSION ?= 18.04
+  CONTAINER_OS_VERSION ?= 20.04
 endif
 
 # The user hasn't handed us a VERTICA_VERSION
@@ -110,12 +110,15 @@ endif
 CONTAINER_NAME = vertica/verticasdk
 export CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS)-v$(VERTICA_VERSION)
 
-build: display Dockerfile_$(TARGET_U) ${SUFFIX} ## Build container given PACKAGE=<file>
+# Development hint: Defining ${DOCKERFILE_SUFFIX} makes it easier to
+# try variations on the Dockerfile
+build: display Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} ## Build container given PACKAGE=<file>
+	# This lets you have the RPM or DEB file in another directory (on this filesystem) 
 	# link/copy rpm file to local directory and clean it up when done
 	ln $(PACKAGE) vertica.$$$$.rpm 2>/dev/null || cp $(VERTICA_RPM) vertica.$$$$.rpm || exit 1 ; \
 	trap "rm -f vertica.$$$$.rpm" EXIT INT; \
 	docker build \
-		-f Dockerfile_$(TARGET_U)${SUFFIX} \
+		-f Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} \
 		--build-arg $(TARGET_U)=vertica.$$$$.rpm \
 		--build-arg os_version=$(CONTAINER_OS_VERSION) \
 		--build-arg vertica_version=$(VERTICA_VERSION) \
@@ -163,3 +166,12 @@ test:
 .PHONY:push
 push: ## push built container up to docker hub
 	docker push $(CONTAINER_TAG)
+
+vsdk-exec: vsdk-exec.template
+	sed "s/++DEFAULT_VERTICA_VERSION++/${VERTICA_VERSION}/" $< > $@
+	chmod +x $@
+
+vsdk-vertica: vsdk-vertica.template
+	sed "s/++DEFAULT_VERTICA_VERSION++/${VERTICA_VERSION}/" $< > $@
+	chmod +x $@
+

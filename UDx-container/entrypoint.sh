@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # -*- mode: shell-script -*-
 # (c) Copyright [2021-2023] Open Text.
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,18 +25,14 @@ if [[ -n $VERTICA_DEBUG_ENTRYPOINT ]] ; then
   set -x
 fi
 
-#
-# The default is to enter the container as dbadmin, so if they are specifying
-# -u, don't do anything special
-#
-vsdk_cmd="$1"
-if [[ $(id -un 2>/dev/null) != dbadmin || $vsdk_cmd != vertica ]]; then
-  exec "$@"
-fi
-
-source /etc/profile
+# The following would be more comfortable if there was an
+# /etc/passwd containing a name for the UID executing this container
+# and an /etc/group containing a name for the GID
+# source /etc/profile
 
 VSQL=/opt/vertica/bin/vsql
+vsdk_dir="$1"
+vsdk_cmd="$2"
 
 ADMINTOOLS="${VERTICA_OPT_DIR}/bin/admintools"
 : ${VERTICA_OPT_DIR:="/opt/vertica"}
@@ -90,19 +85,22 @@ function preserve_config() {
 }
 
 function initialize_vertica_directories() {
-    # first time through --- create db, etc.
-    mkdir -p ${VERTICA_DATA_DIR}/config
-    preserve_config
-    echo 'Creating database'
+    # We only do this if necessary
+    if [ ! -d ${VERTICA_DATA_DIR}/${VERTICA_DB_NAME} ]; then
+        # first time through --- create db, etc.
+        mkdir -p ${VERTICA_DATA_DIR}/config
+        preserve_config
+        echo 'Creating database'
 
-    ${ADMINTOOLS} -t create_db \
-                  --skip-fs-checks \
-                  -s localhost \
-                  --database=$VERTICA_DB_NAME \
-                  --catalog_path=${VERTICA_DATA_DIR} \
-                  --data_path=${VERTICA_DATA_DIR}
+        ${ADMINTOOLS} -t create_db \
+                      --skip-fs-checks \
+                      -s localhost \
+                      --database=$VERTICA_DB_NAME \
+                      --catalog_path=${VERTICA_DATA_DIR} \
+                      --data_path=${VERTICA_DATA_DIR}
 
-    echo
+        echo
+    fi
 }
 
 function start_vertica() {
@@ -126,17 +124,22 @@ function start_vertica() {
 # A container that runs commands like cp, bash, gcc, make, etc., is
 # used to provide an environment for those commands to execute in.
 # When the command completes, the container goes away.
-STOP_LOOP=false
-trap "shut_down" SIGKILL SIGTERM SIGHUP SIGINT
-
-if [ ! -d ${VERTICA_DATA_DIR}/${VERTICA_DB_NAME} ]; then
-  initialize_vertica_directories
-else
-  start_vertica
-fi
-
-while [ "${STOP_LOOP}" == "false" ]; do
-    # We could use admintools -t show_active_db to see if the
-    # db is still running, and restart it if it isn't
-    sleep 10
-done
+case $vsdk_cmd in
+    vertica*)
+        STOP_LOOP=false
+        trap "shut_down" SIGKILL SIGTERM SIGHUP SIGINT
+        initialize_vertica_directories
+        start_vertica
+        echo "Vertica is now running"
+        
+        while [ "${STOP_LOOP}" == "false" ]; do
+            # We could use admintools -t show_active_db to see if the
+            # db is still running, and restart it if it isn't
+            sleep 10
+        done
+        ;;
+    *)
+        cd "$vsdk_dir"
+        sh -c "$vsdk_cmd"
+        ;;
+esac
