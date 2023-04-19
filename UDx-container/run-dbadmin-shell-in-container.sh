@@ -24,8 +24,9 @@ usage_exit() {
     exit 1
 }
 
-user_name=`id -un`
-CONTAINER_NAME=verticasdk-${user_name}
+# user_name=`id -un`
+# CONTAINER_NAME=verticasdk-${user_name}
+CONTAINER_NAME=vsdk-vertica
 
 while getopts "d:hn:u:" opt; do
     case "$opt" in

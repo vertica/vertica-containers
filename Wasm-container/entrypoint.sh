@@ -112,8 +112,10 @@ function start_vertica() {
                   --database=$VERTICA_DB_NAME \
                   --noprompts; then
         echo "Vertica is now running"
+        return 0
     else
         echo "Admintools was unable to start Vertica"
+        return 1
     fi
 }
 
@@ -128,14 +130,14 @@ case $vsdk_cmd in
         STOP_LOOP=false
         trap "shut_down" SIGKILL SIGTERM SIGHUP SIGINT
         initialize_vertica_directories
-        start_vertica
-        echo "Vertica is now running"
-        
-        while [ "${STOP_LOOP}" == "false" ]; do
-            # We could use admintools -t show_active_db to see if the
-            # db is still running, and restart it if it isn't
-            sleep 10
-        done
+        if start_vertica; then
+            echo "Vertica is now running"
+            while [ "${STOP_LOOP}" == "false" ]; do
+                # We could use admintools -t show_active_db to see if the
+                # db is still running, and restart it if it isn't
+                sleep 10
+            done
+        fi
         ;;
     *)
         cd "$vsdk_dir"
