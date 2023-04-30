@@ -75,6 +75,11 @@ else ifeq ($(TARGET), deb)
 else
   # find the package if not specified
   PACKAGE ?= $(wildcard vertica*.rpm vertica*.deb)
+  ifeq ($(words $(PACKAGE)),0)
+    # We found no package and a valid target wasn't specified. Return an
+    # appropriate error message.
+    $(error "No package in directory. Download an RPM or DEB.")
+  endif
 endif
 
 # make sure there is just 1
