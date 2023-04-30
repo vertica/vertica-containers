@@ -8,3 +8,7 @@
 *.deb
 .deb_dockerimage
 .rpm_dockerimage
+
+# Adding these two as they are built from a template
+vsdk-exec
+vsdk-vertica

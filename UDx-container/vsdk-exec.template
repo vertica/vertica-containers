@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# -*- mode: shell-script -*-
+
+# (c) Copyright [2021-2023] Open Text.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Since this script is a wrapper for other commands (which have their
+# own command-line arguments that we don't want to interfere with),
+# most of the option-setting for this script is done using environment
+# variables.
+#
+# For example, $OSTAG-v$VERTICA_VERSION is used to define the docker image
+# (e.g., vertica/verticasdk:centos-v11.0.0).  So, if you have multiple
+# verticavsdk images lying around, you can select among them by
+# defining these variables in the environment.
+#
+# VSDK_IMAGE: select your docker image directly
+# OSTAG: one of { centos, ubuntu } --- selects the docker image OS
+#       version (presumably different from the host operating system,
+#       as otherwise the script just picks it up from
+#       /etc/os-release).
+# VERTICA_VERSION: something like 11.0.0-0
+#
+# In addition, there are these environment variables:
+#
+# VSDK_MOUNT: an optional space-separated list of host directories to
+#       mount in the UDx container --- that is, "I'm going to want to
+#       refer to files in these directories in, for example, my
+#       makefile, or as include directories in code to be compiled"
+#
+# VSDK_ENV: names a file filled with variable definitions.  This uses
+#       the --env-file option of the "docker run" command, so the file
+#       needs to be formatted for that option
+
+PROG=`basename $0`
+CMD=${PROG##*vsdk-}
+if [[ $CMD == exec ]]; then
+    CMD=$1
+    shift
+fi
+
+if [[ -z $VSDK_IMAGE ]]; then
+    if [[ -z $OSTAG ]]; then
+        # The user can default the OS selection by defining OSTAG in the
+        # environment (mostly for testing)
+        . /etc/os-release
+        
+        case $ID in
+            (rhel) OSTAG=centos ;;
+            (ubuntu) OSTAG=ubuntu ;;
+            (*) OSTAG=centos ;;
+        esac
+        WARNINGS+=("WARNING: Guessing OSTAG $OSTAG. Set VSDK_IMAGE to avoid this warning")
+    fi
+    
+    VERTICA_VERSION=${VERTICA_VERSION:++DEFAULT_VERTICA_VERSION++}
+    
+    if [[ -n $OSTAG && -n $VERTICA_VERSION ]]; then
+        VSDK_IMAGE=vertica/verticasdk:$OSTAG-v$VERTICA_VERSION
+    else
+        # Is there only one image?  Let's just print a warning.
+        VSDK_IMAGE=$(docker image ls vertica/verticasdk --format "{{.Repository}}:{{.Tag}}")
+        if [[ $VSDK_IMAGE =~ ^vertica/verticasdk:(centos|ubuntu)-v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$ ]]; then
+            WARNINGS+=("WARNING: Using image $VSDK_IMAGE. Set VSDK_IMAGE to avoid this warning")
+        else
+            echo "ERROR: Set VSDK_IMAGE to vertica/verticasdk:<OSTAG>-v<VERTICA_VERSION>" >&2
+            exit 1
+        fi
+    fi
+fi
+
+# ALSO_IN_PATH will be used in set_container_path
+case $OSTAG in
+    centos)
+        BINDIR=/usr/bin 
+        ALSO_IN_PATH=/bin
+        ;;
+    ubuntu)
+        BINDIR=/bin
+        ALSO_IN_PATH=/usr/bin
+        ;;
+esac
+# must follow the definition of BINDIR
+SCRIPT_DIR="$( cd `dirname "${BASH_SOURCE[0]}"` &> /dev/null && pwd )"
+. ${SCRIPT_DIR}/set_container_path
+
+# we didn't error out, so print the warnings.
+for w in "${WARNINGS[@]}"; do echo $w >&2; done
+
+INTERACTIVE=
+case $CMD in
+    bash) 
+        INTERACTIVE=-it
+        ;;
+    g++|make|cp) 
+        ;;
+    *)                  
+        echo Unknown vsdk-command: $PROG
+        echo Known commands: vsdk-bash, vsdk-g++, vsdk-make, vsdk-cp
+        exit 1
+        ;;
+esac
+
+VSDK_VOLUMES=""
+if [ "VSDK_MOUNT"x != x ]; then
+    for dir in $VSDK_MOUNT; do
+        VSDK_VOLUMES="$VSDK_VOLUMES -v $dir:$dir"
+    done
+fi
+    
+VSDK_ENV_FILE_OPTION=""
+if [ "$VSDK_ENV"x != x ]; then
+    VSDK_ENV_FILE_OPTION="--env-file $VSDK_ENV"
+fi
+
+user_id=`id -u`
+HOSTNAME=vsdk-$USER
+
+CURDIR=`/bin/pwd`
+
+# We need to get any quoted strings into the entrypoint.sh as quoted
+# strings.  That is, if an argument to this script has a space in it
+# entrypoint.sh needs to see it as an argument with a space in it.
+COMMAND="$CMD"
+for arg in "$@"; do
+    COMMAND="$COMMAND \"$arg\""
+done
+
+docker run \
+       $INTERACTIVE \
+       -e PATH=$CONTAINER_PATH \
+       -e vUID=$user_id \
+       -e vUSER=$USER \
+       -u $user_id \
+       -v "$HOME:$HOME:rw" \
+       -v $CURDIR:$CURDIR:rw \
+       --mount type=volume,source=$DVOL,target=/vsdkdata \
+       $VSDK_VOLUMES \
+       $VSDK_ENV_FILE_OPTION \
+       $VSDK_IMAGE \
+       $CURDIR \
+       "$COMMAND"
