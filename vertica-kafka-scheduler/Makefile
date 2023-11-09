@@ -7,7 +7,7 @@ ifdef PACKAGE
 
 VERTICA_UNPACKED=$(patsubst %.rpm,%,$(basename $(PACKAGE)))
 VERTICA_INSTALL=$(VERTICA_UNPACKED)/opt/vertica
-VERTICA_VERSION=v$(firstword $(subst -, ,$(patsubst vertica_%,%,$(patsubst vertica-%,%,$(basename $(PACKAGE))))))
+VERTICA_VERSION=$(firstword $(subst -, ,$(patsubst vertica_%,%,$(patsubst vertica-%,%,$(basename $(PACKAGE))))))
 $(VERTICA_INSTALL): $(PACKAGE) ## Unpack $PACKAGE
 	rm -rf $(VERTICA_UNPACKED); \
 	mkdir -p $(VERTICA_UNPACKED); \
@@ -25,7 +25,7 @@ $(VERTICA_INSTALL): $(PACKAGE) ## Unpack $PACKAGE
 else
 
 VERTICA_INSTALL?=/opt/vertica
-VERTICA_VERSION?=$(shell perl -nE 'my $$v=$$1 if m/Version\s*=\s*"(v[\d\.]*)-/; END { say $$v||"latest" }' $(VERTICA_INSTALL)/sdk/BuildInfo.java 2>/dev/null || echo "latest")
+VERTICA_VERSION?=$(shell perl -nE 'my $$v=$$1 if m/Version\s*=\s*"v([\d\.]*)-/; END { say $$v||"latest" }' $(VERTICA_INSTALL)/sdk/BuildInfo.java 2>/dev/null || echo "latest")
 
 endif
 
