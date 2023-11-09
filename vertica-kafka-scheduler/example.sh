@@ -1,9 +1,12 @@
 #!/bin/bash
 
 # this is a full example of configuring and running a scheduler.  It uses
-# docker-compose to create a kafka and vertica service, then it
+# docker compose to create a kafka and vertica service, then it
 
-# first chose a unique project name for docker-compose
+set -o xtrace
+set -o errexit
+
+# first chose a unique project name for docker compose
 cd "$(dirname ${BASH_SOURCE[0]})" || exit $?
 source ./.env || exit $?
 NETWORK=${COMPOSE_PROJECT_NAME}_example
@@ -35,11 +38,11 @@ fi
 if [[ $steps =~ start ]]; then
 
 # make sure containers have been cleaned up properly
-docker-compose rm -svf >/dev/null 2>&1 || exit $?
+docker compose rm -svf >/dev/null 2>&1 || exit $?
 
 # start servers
-# docker-compose uses colors, so don't override
-docker-compose up -d --force-recreate
+# docker compose uses colors, so don't override
+docker compose up -d --force-recreate
 
 # create a directory for log output
 mkdir -p log
@@ -51,20 +54,20 @@ if [[ $MACHTYPE =~ ^aarch64 ]] || [[ $MACHTYPE =~ ^arm64 ]] ; then
   # Arm based macs crash on a memory check unless this is added
   VERTICA_ENV+=(-e VERTICA_MEMDEBUG=2)
 fi
-docker-compose exec ${VERTICA_ENV[@]} vertica /opt/vertica/bin/admintools -t create_db --database=example --password= --hosts=localhost | $green || exit $?
+docker compose exec ${VERTICA_ENV[@]} vertica /opt/vertica/bin/admintools -t create_db --database=example --password= --hosts=localhost | $green || exit $?
 
 # create a simple table to store messages
-docker-compose exec vertica vsql -c 'create flex table KafkaFlex()' | $green || exit $?
+docker compose exec vertica vsql -c 'create flex table KafkaFlex()' | $green || exit $?
 
 # create an operator
-docker-compose exec vertica vsql -c 'create user JimmyKafka' | $green || exit $?
+docker compose exec vertica vsql -c 'create user JimmyKafka' | $green || exit $?
 
 # create a resource pool
-docker-compose exec vertica vsql -c 'create resource pool Scheduler_pool plannedconcurrency 1' | $green || exit $?
+docker compose exec vertica vsql -c 'create resource pool Scheduler_pool plannedconcurrency 1' | $green || exit $?
 
 # create a couple topics
-docker-compose exec kafka kafka-run-class.sh kafka.admin.TopicCommand --create --partitions 10 --replication-factor 1 --topic KafkaTopic1 --bootstrap-server kafka:9092 | $green || exit $?
-docker-compose exec kafka kafka-run-class.sh kafka.admin.TopicCommand --create --partitions 10 --replication-factor 1 --topic KafkaTopic2 --bootstrap-server kafka:9092 | $green || exit $?
+docker compose exec kafka kafka-run-class.sh kafka.admin.TopicCommand --create --partitions 10 --replication-factor 1 --topic KafkaTopic1 --bootstrap-server kafka:9092 | $green || exit $?
+docker compose exec kafka kafka-run-class.sh kafka.admin.TopicCommand --create --partitions 10 --replication-factor 1 --topic KafkaTopic2 --bootstrap-server kafka:9092 | $green || exit $?
 
 fi
 ###################
@@ -187,17 +190,17 @@ if [[ $steps =~ write ]]; then
 while true; do
 
 # write a test subject with a caffine addiction
-docker-compose exec kafka bash -c 'echo "{\"Test Subject\":\"98101\", \"Diagnosis\":\"Caffine Addiction\"}" | kafka-console-producer.sh \
+docker compose exec kafka bash -c 'echo "{\"Test Subject\":\"98101\", \"Diagnosis\":\"Caffine Addiction\"}" | kafka-console-producer.sh \
   --topic KafkaTopic1 \
   --bootstrap-server localhost:9092' | grep . | $green
 
 # Make sure it's there
 # This produces an eroneous error message, so grep is used to only print messages
-docker-compose exec kafka kafka-console-consumer.sh --topic KafkaTopic1 --bootstrap-server localhost:9092 --from-beginning --timeout-ms 1000 | grep '^{' | $green
+docker compose exec kafka kafka-console-consumer.sh --topic KafkaTopic1 --bootstrap-server localhost:9092 --from-beginning --timeout-ms 1000 | grep '^{' | $green
 
 # wait for it to appear in vertica
 delay=0
-while ! docker-compose exec vertica vsql -t -c "SELECT compute_flextable_keys_and_build_view('KafkaFlex'); SELECT Diagnosis FROM KafkaFlex_view WHERE \"Test Subject\" = '98101'" | grep Caffine >/dev/null 2>&1; do
+while ! docker compose exec vertica vsql -t -c "SELECT compute_flextable_keys_and_build_view('KafkaFlex'); SELECT Diagnosis FROM KafkaFlex_view WHERE \"Test Subject\" = '98101'" | grep Caffine >/dev/null 2>&1; do
   if ((delay++ > 20)); then
     echo "ERROR: Should have appeared within the ~10 second frame duration." | $red >&2
     break 2
@@ -206,18 +209,18 @@ while ! docker-compose exec vertica vsql -t -c "SELECT compute_flextable_keys_an
   sleep 1;
 done
 
-docker-compose exec vertica vsql -c "SELECT * FROM KafkaFlex_view" | $green
+docker compose exec vertica vsql -c "SELECT * FROM KafkaFlex_view" | $green
 
 # write a test subject with a cold feet problem
-docker-compose exec kafka bash -c 'echo "{\"Test Subject\":\"99782\", \"Diagnosis\":\"Cold Feet\"}" | kafka-console-producer.sh \
+docker compose exec kafka bash -c 'echo "{\"Test Subject\":\"99782\", \"Diagnosis\":\"Cold Feet\"}" | kafka-console-producer.sh \
   --topic KafkaTopic2 \
   --bootstrap-server localhost:9092' | grep . | $green
 
 # Make sure it's there
-docker-compose exec kafka kafka-console-consumer.sh --topic KafkaTopic2 --bootstrap-server localhost:9092 --from-beginning --timeout-ms 1000 | grep '^{' | $green
+docker compose exec kafka kafka-console-consumer.sh --topic KafkaTopic2 --bootstrap-server localhost:9092 --from-beginning --timeout-ms 1000 | grep '^{' | $green
 
 delay=0
-while ! docker-compose exec vertica vsql -t -c "SELECT compute_flextable_keys_and_build_view('KafkaFlex'); SELECT Diagnosis FROM KafkaFlex_view WHERE \"Test Subject\" = '99782'" | grep Cold >/dev/null 2>&1; do
+while ! docker compose exec vertica vsql -t -c "SELECT compute_flextable_keys_and_build_view('KafkaFlex'); SELECT Diagnosis FROM KafkaFlex_view WHERE \"Test Subject\" = '99782'" | grep Cold >/dev/null 2>&1; do
   if ((delay++ > 20)); then
     echo "ERROR: Should have appeared within the ~10 second frame duration." | $red >&2
     break 2
@@ -229,9 +232,9 @@ done
 break
 done
 
-docker-compose exec vertica vsql -c "SELECT * FROM KafkaFlex_view" | $green
-if (( $(docker-compose exec vertica vsql -t -c "SELECT count(*) FROM KafkaFlex_rej" | head -1 | sed 's/\s//g') )); then
-  docker-compose exec vertica vsql -c "SELECT * FROM KafkaFlex_rej" | $red
+docker compose exec vertica vsql -c "SELECT * FROM KafkaFlex_view" | $green
+if (( $(docker compose exec vertica vsql -t -c "SELECT count(*) FROM KafkaFlex_rej" | head -1 | sed 's/\s//g') )); then
+  docker compose exec vertica vsql -c "SELECT * FROM KafkaFlex_rej" | $red
 fi
 
 fi
@@ -271,7 +274,7 @@ fi
 ###############################
 if [[ $steps =~ clean ]]; then
 
-# docker-compose uses colors, so don't override
-#docker-compose down
-docker-compose rm -svf
+# docker compose uses colors, so don't override
+#docker compose down
+docker compose rm -svf
 fi
