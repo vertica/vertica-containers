@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##############################################################################
-ARG os_version="7.9.2009"
+ARG os_version="8"
 
-FROM centos:${os_version} as builder
+FROM almalinux:${os_version} as builder
 
 ENV VERTICA_OPT_DIR="/opt/vertica"
 ENV VERTICA_VOLUME_DIR="/data"
@@ -124,7 +124,7 @@ RUN chmod -R g+w ${VERTICA_OPT_DIR}
 RUN sh /tmp/cleanup.sh
 
 ############################################################################
-FROM centos:${os_version}
+FROM almalinux:${os_version}
 
 ARG vertica_db_user="dbadmin"
 ARG vertica_db_group="verticadba"
