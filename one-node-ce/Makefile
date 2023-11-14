@@ -67,7 +67,7 @@ $(error "Choice of OS_TYPE Ubuntu not consistent with choice of .rpm file for VE
 	endif
 else
 	OS_TYPE = CentOS 
-	OS_VERSION ?= 8
+	OS_VERSION ?= 8.6
 	ifeq ($(TAG),latest)
 		VERTICA_PACKAGE ?= vertica-x86_64.RHEL6.latest.rpm
 	else

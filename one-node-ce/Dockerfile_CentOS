@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##############################################################################
-ARG os_version="8"
+ARG os_version="8.6"
 
 FROM almalinux:${os_version} as builder
 
