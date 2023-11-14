@@ -95,8 +95,8 @@ endif
 
 ifeq ($(TARGET), rpm)
   TARGET_U=RPM
-  CONTAINER_OS=centos
-  CONTAINER_OS_VERSION ?= 7.9.2009
+  CONTAINER_OS=alma
+  CONTAINER_OS_VERSION ?= 8.6
 else ifeq ($(TARGET), deb)
   TARGET_U=DEB
   CONTAINER_OS=ubuntu
