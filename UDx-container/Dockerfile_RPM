@@ -14,9 +14,9 @@
 ##############################################################################
 
 # Base operating system
-ARG os_version="7.9.2009"
+ARG os_version="8.6"
 
-FROM centos:${os_version} as builder
+FROM almalinux:${os_version} as builder
 
 ENV VERTICA_OPT_DIR="/opt/vertica"
 ENV VERTICA_VOLUME_DIR="/data"
@@ -42,48 +42,88 @@ COPY ./tools/cleanup.sh /tmp/
 COPY ./tools/package-checksum-patcher.py /tmp/
 COPY ./tools/init.d.functions /etc/rc.d/init.d/functions
 
-# Install prerequisites and Vertica
-    # Update is needed to be confident that we're picking up
-    # fixed libraries.  We depend on malware check of container afterwards
-# this creates multiple layers, but the many layers will be taken care of
-# when we switch to the next stage of the build
-RUN bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then yum install -q -y dnf-plugins-core; yum -q config-manager --set-enabled powertools; yum -q -y install glibc-locale-source; fi"
-RUN yum -q -y update \
-    && yum -y update --security \
-    && yum -q -y makecache \
-    # CentOS 8
-    && yum install -y \
-           yum-utils \
-           centos-release-scl \
-    && yum clean all \
-    && yum-config-manager --enable rhel-server-rhscl-7-rpms \
-    && yum install -y \
-# Packages needed to install Vertica
-        cronie \
+# Add yum repos
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y epel-release && yum clean all
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core epel-release && yum clean all
+RUN yum config-manager --enable powertools
+
+# Packages needed to build Vertica
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} dnf group install -y "Development Tools"
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y \
+        alien \
+        ant \
+        autoconf \
+        automake \
+        bc \
+        bison \
+        byacc \
+        bzip2-devel \
+        ccache \
+        chrpath \
+        cmake \
         dialog \
+        dos2unix \
+        doxygen \
+        dpkg \
+        flex \
         gcc-c++ \
-        glibc-static \
-        gdb \
+        gcc-gfortran \
+        gettext \
+        git-all \
+        glibc-devel \
+        glibc-headers \
+        glibc-langpack-en \
+        glibc-locale-source \
+        glibc-utils \
+        graphviz \
+        intltool \
+        iotop \
         iproute \
-        libstdc++-static \
+        java-1.8.0 \
+        jq \
+        libasan \
+        libcurl-devel \
+        libgfortran-* \
+        libgomp-* \
+        libtool \
+        libacl-devel \
+        lsof \
         make \
-        mcelog \
-        openssh-server \
-        openssh-clients \
-        openssl \
+        mlocate \
+        ncurses-devel \
+        nss-pam-ldapd \
+        openldap-clients \
+        openssl-devel \
+        patch \
+        perl-libwww-perl \
+        perl-core \
+        python3 \
+        readline-devel \
+        redhat-rpm-config \
+        rpm-build \
+        rpm-sign \
+        rpmdevtools \
+        rpmlint \
+        rsync \
         sudo \
         sysstat \
+        telnet \
+        time \
         wget \
-        which
+        xmlto \
+        && yum clean all
+
+# RHEL8 and their clones don't have a "python" binary, so define the symlink to point to python3.
+# # Helps backards compatibility since many scripts expect just "python" to exist.
+RUN alternatives --set python /usr/bin/python3
 
 # Install Vertica package
 RUN yum localinstall -q -y /tmp/$RPM
  # Cleanup to optimize the size of final image
 RUN rm -rf ${VERTICA_OPT_DIR}/lib64
 
- # CentOS 8 - fixes issue "Unsupported locale character encoding: use
- # a utf8 locale, not a ANSI_X3.4-1968 locale"
-RUN bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then localedef -i en_US -f UTF-8 en_US.UTF-8; fi"
+RUN localedef -i en_US -f UTF-8 en_US.UTF-8
+
 # Create DB user in OS and create python egg cache dir under this user
 # Run install_vertica script to prepare environment
 RUN mkdir -p ${VERTICA_DATA_DIR} \
@@ -127,8 +167,8 @@ RUN chmod -R g+w ${VERTICA_OPT_DIR}
 RUN sh /tmp/cleanup.sh
 
 ############################################################################
-ARG os_version="7.9.2009"
-FROM centos:${os_version}
+ARG os_version="8.6"
+FROM almalinux:${os_version}
 
 ARG vertica_db_user="dbadmin"
 ARG vertica_db_group="verticadba"
@@ -167,89 +207,6 @@ RUN set -x \
                           -g $vertica_db_group \
                           $vertica_db_user \
     && su - $vertica_db_user -c "mkdir $PYTHON_EGG_CACHE" \
-# Install prerequisites, create Vertica data dir, set privileges, document
-# fix timezone issue and generate locales in case of centOS 8
-    && yum -q -y update \
-    && yum -y update --security \
-    && yum -q -y makecache \
-    && yum install -y yum-plugin-ovl \
-    && yum install -y \
-           yum-utils \
-           centos-release-scl \
-    && yum clean all \
-    && yum-config-manager --enable rhel-server-rhscl-7-rpms \
- # CentOS 8
- && bash -c "if [ \"$(rpm -E %{rhel})\" == '8' ]; then yum install -q -y dnf-plugins-core; yum -q config-manager --set-enabled powertools; yum -q -y install glibc-locale-source; localedef -i en_US -f UTF-8 en_US.UTF-8; fi" \
-     && yum install -y \
-        # Install the same things from the builder
-        cronie \
-        dialog \
-        gcc-c++ \
-        glibc-static \
-        gdb \
-        iproute \
-        libstdc++-static \
-        make \
-        mcelog \
-        openssh-server \
-        openssh-clients \
-        openssl \
-        sudo \
-        sysstat \
-        wget \
-        which \
-        # Packages needed to build Vertica UDxes
-        binutils \
-        boost \
-        bzip2-devel \
-        compat-libgfortran-41 \
-        cmake \
-        devtoolset-7-binutils \
-        devtoolset-7-binutils-devel \
-        devtoolset-7-elfutils \
-        devtoolset-7-elfutils-libelf \
-        devtoolset-7-elfutils-libs \
-        devtoolset-7-gcc \
-        devtoolset-7-gcc-c++ \
-        devtoolset-7-gcc-gfortran \
-        devtoolset-7-gdb \
-        devtoolset-7-libasan-devel \
-        devtoolset-7-libquadmath-devel \
-        devtoolset-7-libstdc++-devel \
-        devtoolset-7-oprofile \
-        devtoolset-7-runtime \
-        devtoolset-7-strace \
-        devtoolset-7-valgrind \
-        devtoolset-7-valgrind-devel \
-        devtoolset-7-libubsan-devel \
-        devtoolset-7-libtsan-devel \
-        devtoolset-7-liblsan-devel \
-        devtoolset-7-libasan-devel \
-        doxygen \
-        expat \
-        flex \
-        gcc \
-        gettext \
-        glibc-devel \
-        glibc-headers \
-        glibc-static \
-        glibc-utils \
-        less \
-        imake \
-        libcurl-devel \
-        "libgfortran-*" \
-        "libgomp-*" \
-        libtool \
-        libacl-devel \
-        nasm \
-        # TODO: should use Vertica's own openssl headers, except
-        # that we don't put them into the RPM
-        openssl-devel \
-        readline-devel \
-        tar \
-        vim \
-        && yum clean all \
-        && rm -rf /var/cache/yum \
      # Allow passwordless sudo access from any user
      && echo "ALL ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers \
      # docker daemons versions < 19.03 don't preserve ownership on COPY --from
@@ -266,11 +223,6 @@ RUN set -x \
          && yum clean all \
          && rm -rf /var/cache/yum
 
-# Enable devtoolset by default for users
-RUN ln -s /opt/rh/devtoolset-7/enable /etc/profile.d/enable-devtools.sh \
-    # Use ld.gold; faster link times
-    && ln -sf /opt/rh/devtoolset-7/root/usr/bin/ld.gold /opt/rh/devtoolset-7/root/etc/alternatives/ld
-
 # vertica v10 (and earlier, but 10 is what we're interested in enough
 # to test) vertica_agent script uses the rpm command to find out where
 # Vertica is installed.  But we threw the 900-1200 MB of rpm info away
@@ -283,10 +235,6 @@ RUN bash /tmp/vertica_agent_patch.sh
 
 ADD ./env_setup/vertica_env.sh /etc/profile.d/
 COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
-
-#overwrite path in /etc/environment for non-root users
-RUN echo PATH="/opt/vertica/bin:/opt/rh/devtoolset-7/root/usr/bin:/opt/rh/devtoolset-7/root/usr/libexec/gcc/x86_64-redhat-linux/7:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" > /etc/environment
-ENV PATH="/opt/vertica/bin:/opt/rh/devtoolset-7/root/usr/bin:/opt/rh/devtoolset-7/root/usr/libexec/gcc/x86_64-redhat-linux/7:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # DB is running under vertica_db_user, not under root
 USER $vertica_db_user
@@ -307,3 +255,4 @@ LABEL os_family="$CONTAINER_OS"
 LABEL os_version="$CONTAINER_OS_VERSION"
 LABEL vertica_version="$VERTICA_VERSION"
 LABEL maintainer="K8 Team"
+
