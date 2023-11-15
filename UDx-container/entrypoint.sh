@@ -72,8 +72,8 @@ function preserve_config() {
     if ! [[ -f ${VERTICA_DATA_DIR}/config/admintools.conf ]]; then
         # first time through docker-entrypoint.sh we need to move
         # the config directory to persistent store
-        /bin/sudo cp --archive ${VERTICA_OPT_DIR}/config ${VERTICA_DATA_DIR}
-        /bin/sudo chown -R ${VERTICA_DB_USER} ${VERTICA_DATA_DIR}/config
+        sudo cp --archive ${VERTICA_OPT_DIR}/config ${VERTICA_DATA_DIR}
+        sudo chown -R ${VERTICA_DB_USER} ${VERTICA_DATA_DIR}/config
     fi
     # unfortunately, the symlink is in the container image
     # so we have to renew it each time if a shared volume is used for $VERTICA_VOLUME_DIR
