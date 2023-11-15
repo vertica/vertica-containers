@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##############################################################################
+##### Start Builder Image
 
 # Base operating system
 ARG os_version="8.6"
@@ -119,7 +120,7 @@ RUN alternatives --set python /usr/bin/python3
 
 # Install Vertica package
 RUN yum localinstall -q -y /tmp/$RPM
- # Cleanup to optimize the size of final image
+# Cleanup to optimize the size of final image
 RUN rm -rf ${VERTICA_OPT_DIR}/lib64
 
 RUN localedef -i en_US -f UTF-8 en_US.UTF-8
@@ -166,7 +167,13 @@ RUN chmod -R g+w ${VERTICA_OPT_DIR}
 
 RUN sh /tmp/cleanup.sh
 
+##### End Builder Image
 ############################################################################
+
+
+############################################################################
+##### Start Final Image
+
 ARG os_version="8.6"
 FROM almalinux:${os_version}
 
@@ -206,22 +213,74 @@ RUN set -x \
                           -G root \
                           -g $vertica_db_group \
                           $vertica_db_user \
-    && su - $vertica_db_user -c "mkdir $PYTHON_EGG_CACHE" \
-     # Allow passwordless sudo access from any user
-     && echo "ALL ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers \
-     # docker daemons versions < 19.03 don't preserve ownership on COPY --from
-     # so we have to chown these things again
-     && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_DATA_DIR} \
-         && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
-         && chmod 755 ${VERTICA_HOME_DIR} \
-     # but this chown is expensive in image-size, so we use aother
-     # trick in the first half of the build
-     # && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \
- # Link OS timezones, check entrypoint script
- # && rm -rf ${VERTICA_OPT_DIR}/share/timezone \
- # && ln -sT /usr/share/zoneinfo ${VERTICA_OPT_DIR}/share/timezone \
-         && yum clean all \
-         && rm -rf /var/cache/yum
+    && su - $vertica_db_user -c "mkdir $PYTHON_EGG_CACHE" 
+    
+# Add yum repos
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y epel-release && yum clean all
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core epel-release && yum clean all
+RUN yum config-manager --enable powertools
+
+# Install Prerequisites
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} dnf group install -y "Development Tools"
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y \
+        # Install the same things from the builder
+        cronie \
+        dialog \
+        gcc-c++ \
+        glibc-static \
+        gdb \
+        iproute \
+        libstdc++-static \
+        make \
+        mcelog \
+        openssh-server \
+        openssh-clients \
+        openssl \
+        sudo \
+        sysstat \
+        wget \
+        which \
+        # Packages needed to build Vertica UDxes
+        binutils \
+        boost \
+        bzip2-devel \
+        cmake \
+        doxygen \
+        expat \
+        flex \
+        gcc-c++ \
+        gcc-gfortran \
+        gettext \
+        git-all \
+        glibc-devel \
+        glibc-headers \
+        glibc-langpack-en \
+        glibc-locale-source \
+        glibc-utils \
+        less \
+        imake \
+        iproute \
+        libasan \
+        libcurl-devel \
+        libgfortran-* \
+        libgomp-* \
+        libtool \
+        libacl-devel \
+        nasm \
+        openssl-devel \
+        readline-devel \
+        tar \
+        vim \
+        && yum clean all \                
+      # Allow passwordless sudo access from any user
+      && echo "ALL ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers \
+      # docker daemons versions < 19.03 don't preserve ownership on COPY --from
+      # so we have to chown these things again
+        && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_DATA_DIR} \
+        && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
+        && chmod 755 ${VERTICA_HOME_DIR} 
+         
+RUN localedef -i en_US -f UTF-8 en_US.UTF-8
 
 # vertica v10 (and earlier, but 10 is what we're interested in enough
 # to test) vertica_agent script uses the rpm command to find out where
@@ -256,3 +315,5 @@ LABEL os_version="$CONTAINER_OS_VERSION"
 LABEL vertica_version="$VERTICA_VERSION"
 LABEL maintainer="K8 Team"
 
+##### End Final Image
+############################################################################
