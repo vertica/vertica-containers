@@ -24,15 +24,14 @@ Vertica provides a Dockerfile for different distributions so that you can create
 - 11.x
 - 10.x
 
-## CentOS
-- 8.3
-- 7.9
+## AlmaLinux
+- 8.6
 
 ## Ubuntu
 - 20.04
 - 18.04
 
-Vertica tests the CentOS containers most thoroughly. Vertica provides the [Dockerfile_Ubuntu](./Dockerfile_Ubuntu) for users that have only a Vertica DEB file. You can adapt that Dockerfile for recent versions of Debian.
+Vertica tests the AlmaLinux containers most thoroughly. Vertica provides the [Dockerfile_Ubuntu](./Dockerfile_Ubuntu) for users that have only a Vertica DEB file. You can adapt that Dockerfile for recent versions of Debian.
 
 # How to use this image
 
@@ -52,9 +51,9 @@ The following table describes base image properties that you can customize with 
 | :--------------------| :-----------| :--------------|
 | `TAG`          | Required. Image tag that represents the Vertica version. | `latest` |
 | `IMAGE_NAME`   | Required. Image name. | `vertica-ce` |
-| `OS_TYPE`      | Required. Operating system distribution.  | `CentOS` | 
-| `OS_VERSION`   | Required. Operatoring system versions. | CentOS: `7.9.2009`<br> Ubuntu: `18.04` | 
-| `VERTICA_PACKAGE` | Name of the RPM or DEB file. | CentOS: `vertica-x86_64.RHEL6.latest.rpm`<br>Ubuntu: `vertica.latest.deb` |
+| `OS_TYPE`      | Required. Operating system distribution.  | `AlmaLinux` | 
+| `OS_VERSION`   | Required. Operatoring system versions. | AlmaLinux: `8.6`<br> Ubuntu: `18.04` | 
+| `VERTICA_PACKAGE` | Name of the RPM or DEB file. | AlmaLinux: `vertica-x86_64.RHEL6.latest.rpm`<br>Ubuntu: `vertica.latest.deb` |
 
 > **Note**: If you do not specify `VERTICA_PACKAGE`, and `TAG` is not set to `latest`, then the `TAG` must be the Vertica version because it is used to construct the version portion of the `VERTICA_PACKAGE` name.
 

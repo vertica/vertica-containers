@@ -44,7 +44,7 @@ ifeq ($(origin OS_TYPE), undefined)
 		ifeq (.deb, $(findstring .deb, $(VERTICA_PACKAGE)))
 			OS_TYPE=Ubuntu
 		else
-			OS_TYPE=CentOS
+			OS_TYPE=AlmaLinux
 		endif
 	else
 # can't indent because then it looks like part of a recipe
@@ -53,7 +53,7 @@ $(error "Need one of OS_TYPE or VERTICA_PACKAGE to be defined")
 endif
 
 
-# This step ensures that the script builds CentOS7.9.2009 in default.
+# This step ensures that the script builds AlmaLinux-8.6 in default.
 # Check for Image OS and assign default values to OS_VERSION, if not defined.
 ifeq ($(OS_TYPE),Ubuntu)
 	OS_VERSION ?= 18.04
@@ -66,7 +66,7 @@ ifeq ($(OS_TYPE),Ubuntu)
 $(error "Choice of OS_TYPE Ubuntu not consistent with choice of .rpm file for VERTICA_PACKAGE")
 	endif
 else
-	OS_TYPE = CentOS 
+	OS_TYPE = AlmaLinux
 	OS_VERSION ?= 8.6
 	ifeq ($(TAG),latest)
 		VERTICA_PACKAGE ?= vertica-x86_64.RHEL6.latest.rpm
@@ -74,7 +74,7 @@ else
 		VERTICA_PACKAGE ?= vertica-$(TAG).x86_64.RHEL6.rpm
 	endif
 	ifeq (.deb, $(findstring .deb, $(VERTICA_PACKAGE)))
-$(error "Choice of OS_TYPE CentOS not consistent with choice of .deb file for VERTICA_PACKAGE")
+$(error "Choice of OS_TYPE AlmaLinux not consistent with choice of .deb file for VERTICA_PACKAGE")
 	endif
 endif
 
@@ -105,8 +105,8 @@ display:
 	$(info  Defined Parameters)
 	$(info    - Image Name  ='$(IMAGE_NAME)', Default:vertica-ce)
 	$(info    - Tag         ='$(TAG)', Default:latest)
-	$(info    - OS Type     ='$(OS_TYPE)', Default:CentOS)
-	$(info    - OS Version  ='$(OS_VERSION)', Default:7.9.2009)
+	$(info    - OS Type     ='$(OS_TYPE)', Default:AlmaLinux)
+	$(info    - OS Version  ='$(OS_VERSION)', Default:8.6)
 	$(info    - DB User     ='$(VERTICA_DB_USER)', Default if blank: dbadmin)
 	$(info    - DB Group    ='$(VERTICA_DB_GROUP)', Default if blank: verticadba)
 	$(info    - DB Name     ='$(VERTICA_DB_NAME)', Default if blank: :VMart)
