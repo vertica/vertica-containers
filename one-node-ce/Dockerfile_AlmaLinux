@@ -238,6 +238,6 @@ EXPOSE 5433
 EXPOSE 5444
 
 LABEL image_name="vertica_db"
-LABEL os_family="centos"
+LABEL os_family="almalinux"
 LABEL os_version="$os_version"
 LABEL maintainer="K8 Team"
