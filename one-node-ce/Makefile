@@ -69,9 +69,9 @@ else
 	OS_TYPE = AlmaLinux
 	OS_VERSION ?= 8.6
 	ifeq ($(TAG),latest)
-		VERTICA_PACKAGE ?= $(basename $(notdir $(wildcard packages/vertica*.rpm)))
+		VERTICA_PACKAGE ?= $(notdir $(wildcard packages/vertica*.rpm))
 	else
-		VERTICA_PACKAGE ?= $(basename $(notdir $(wildcard packages/vertica-$(TAG)*.rpm)))
+		VERTICA_PACKAGE ?= $(notdir $(wildcard packages/vertica-$(TAG)*.rpm))
 	endif
 	ifeq (.deb, $(findstring .deb, $(VERTICA_PACKAGE)))
 $(error "Choice of OS_TYPE AlmaLinux not consistent with choice of .deb file for VERTICA_PACKAGE")
