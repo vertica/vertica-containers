@@ -13,9 +13,10 @@
 # limitations under the License.
 ############################################################################
 
-ARG os_version="18.04"
+ARG os_version
+ARG os_image
 
-FROM ubuntu:${os_version} as builder
+FROM ${os_image}:${os_version} as builder
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV TERM 1
@@ -121,7 +122,7 @@ RUN sh /tmp/cleanup.sh
 ############################################################################################################
 ARG os_version="18.04"
 
-FROM ubuntu:${os_version} 
+FROM ${os_image}:${os_version} 
 
 ARG vertica_db_user="dbadmin"
 ARG vertica_db_group="verticadba"

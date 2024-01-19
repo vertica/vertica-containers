@@ -56,7 +56,7 @@ endif
 # This step ensures that the script builds AlmaLinux-8.6 in default.
 # Check for Image OS and assign default values to OS_VERSION, if not defined.
 ifeq ($(OS_TYPE),Ubuntu)
-	OS_VERSION ?= 18.04
+	OS_VERSION ?= 22.04
 	ifeq ($(TAG),latest)
 		VERTICA_PACKAGE ?= vertica.latest.deb
 	else
@@ -67,7 +67,7 @@ $(error "Choice of OS_TYPE Ubuntu not consistent with choice of .rpm file for VE
 	endif
 else
 	OS_TYPE = AlmaLinux
-	OS_VERSION ?= 8.6
+	OS_VERSION ?= 8
 	ifeq ($(TAG),latest)
 		VERTICA_PACKAGE ?= $(notdir $(wildcard packages/vertica*.rpm))
 	else
@@ -97,6 +97,10 @@ ifneq ($(VERTICA_DB_NAME),)
 	UID_ARG=--build-arg vertica_db_name=${VERTICA_DB_NAME}
 endif
 
+# Allow you to add additional build options.
+ADDITIONAL_BUILD_OPTS?=
+
+OS_IMAGE:=$(shell echo $(OS_TYPE) | tr A-Z a-z)
 
 all: docker-build
 
@@ -106,7 +110,8 @@ display:
 	$(info    - Image Name  ='$(IMAGE_NAME)', Default:vertica-ce)
 	$(info    - Tag         ='$(TAG)', Default:latest)
 	$(info    - OS Type     ='$(OS_TYPE)', Default:AlmaLinux)
-	$(info    - OS Version  ='$(OS_VERSION)', Default:8.6)
+	$(info    - OS Version  ='$(OS_VERSION)')
+	$(info    - OS Image    ='$(OS_IMAGE):$(OS_VERSION)')
 	$(info    - DB User     ='$(VERTICA_DB_USER)', Default if blank: dbadmin)
 	$(info    - DB Group    ='$(VERTICA_DB_GROUP)', Default if blank: verticadba)
 	$(info    - DB Name     ='$(VERTICA_DB_NAME)', Default if blank: :VMart)
@@ -116,14 +121,17 @@ display:
 
 .PHONY: docker-build
 docker-build: packages/${VERTICA_PACKAGE} display Dockerfile_$(OS_TYPE)
+	docker pull ${OS_IMAGE}:${OS_VERSION} ## make sure we use the latest image
 	docker build \
 	   -f Dockerfile_${OS_TYPE} \
+	   --build-arg os_image=${OS_IMAGE} \
 	   --build-arg os_version=${OS_VERSION} \
 	   --build-arg vertica_package=${VERTICA_PACKAGE} \
 	   ${GROUP_ARG} \
 	   ${NAME_ARG} \
 	   ${UID_ARG} \
 	   ${USER_ARG} \
+	   ${ADDITIONAL_BUILD_OPTS} \
 	   -t ${VERTICA_IMAGE} .
 
 .PHONY: test
