@@ -14,9 +14,10 @@
 ############################################################################
 
 # Base operating system
-ARG os_version="18.04"
+ARG os_version
+ARG os_image
 
-FROM ubuntu:${os_version} as builder
+FROM ${os_image}:${os_version} as builder
 
 # useful to keep dpkg from prompting us for information
 ENV DEBIAN_FRONTEND noninteractive
@@ -119,9 +120,7 @@ RUN chmod -R g+w ${VERTICA_OPT_DIR}
 RUN sh /tmp/cleanup.sh
 
 ###########################################################################
-ARG os_version="18.04"
-
-FROM ubuntu:${os_version}
+FROM ${os_image}:${os_version}
 
 ARG vertica_db_user="dbadmin"
 ARG vertica_db_group="verticadba"

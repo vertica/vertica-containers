@@ -15,9 +15,10 @@
 ##### Start Builder Image
 
 # Base operating system
-ARG os_version="8.6"
+ARG os_version
+ARG os_image
 
-FROM almalinux:${os_version} as builder
+FROM ${os_image}:${os_version} as builder
 
 ENV VERTICA_OPT_DIR="/opt/vertica"
 ENV VERTICA_VOLUME_DIR="/data"
@@ -174,8 +175,7 @@ RUN sh /tmp/cleanup.sh
 ############################################################################
 ##### Start Final Image
 
-ARG os_version="8.6"
-FROM almalinux:${os_version}
+FROM ${os_image}:${os_version}
 
 ARG vertica_db_user="dbadmin"
 ARG vertica_db_group="verticadba"
