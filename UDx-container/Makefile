@@ -95,11 +95,13 @@ endif
 
 ifeq ($(TARGET), rpm)
   TARGET_U=RPM
-  CONTAINER_OS=alma
-  CONTAINER_OS_VERSION ?= 8.6
+  CONTAINER_OS=almalinux
+  CONTAINER_OS_TAG=alma
+  CONTAINER_OS_VERSION ?= 8
 else ifeq ($(TARGET), deb)
   TARGET_U=DEB
   CONTAINER_OS=ubuntu
+  CONTAINER_OS_TAG=ubuntu
   CONTAINER_OS_VERSION ?= 20.04
 endif
 
@@ -113,11 +115,15 @@ ifeq ($(origin VERTICA_VERSION), undefined)
 endif
 
 CONTAINER_NAME = vertica/verticasdk
-export CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS)-v$(VERTICA_VERSION)
+export CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS_TAG)-v$(VERTICA_VERSION)
+
+# Allow you to add additional build options.
+ADDITIONAL_BUILD_OPTS?=
 
 # Development hint: Defining ${DOCKERFILE_SUFFIX} makes it easier to
 # try variations on the Dockerfile
 build: display Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} ## Build container given PACKAGE=<file>
+	docker pull ${CONTAINER_OS}:${CONTAINER_OS_VERSION} ## make sure we use the latest image
 	# This lets you have the RPM or DEB file in another directory (on this filesystem) 
 	# link/copy rpm file to local directory and clean it up when done
 	ln $(PACKAGE) vertica.$$$$.rpm 2>/dev/null || cp $(VERTICA_RPM) vertica.$$$$.rpm || exit 1 ; \
@@ -126,7 +132,9 @@ build: display Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} ## Build container giv
 		-f Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} \
 		--build-arg $(TARGET_U)=vertica.$$$$.rpm \
 		--build-arg os_version=$(CONTAINER_OS_VERSION) \
+		--build-arg os_image=$(CONTAINER_OS) \
 		--build-arg vertica_version=$(VERTICA_VERSION) \
+		${ADDITIONAL_BUILD_OPTS} \
 		--tag $(CONTAINER_TAG) .
 
 .PHONY: display
