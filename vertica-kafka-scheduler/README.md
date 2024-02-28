@@ -2,7 +2,7 @@
 
 This repository provides the tools to build and maintain a containerized version of the [Vertica Kafka Scheduler](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/AutomaticallyCopyingDataFromKafka.htm), a standalone Java application that automatically consumes data from one or more Kafka topics and then loads the structured data into Vertica. The scheduler is controlled by the `vkconfig` command line script.
 
-You can download the pre-built [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) image, or you can use the Dockerfile in this repo to build the image locally. The image is based on [alpine:3.14](https://hub.docker.com/_/alpine) and includes the [openjdk8-jre](https://hub.docker.com/_/openjdk).
+You can download the pre-built [vertica/kafka-scheduler](https://hub.docker.com/r/opentext/kafka-scheduler) image, or you can use the Dockerfile in this repo to build the image locally. The image is based on [alpine:3.14](https://hub.docker.com/_/alpine) and includes the [openjdk8-jre](https://hub.docker.com/_/openjdk).
 
 
 For in-depth details about streaming data with Vertica and Apache Kafka, see [Apache Kafka Integration](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/KafkaIntegrationGuide.htm) in the Vertica documentation.
@@ -34,8 +34,8 @@ For in-depth details about streaming data with Vertica and Apache Kafka, see [Ap
 ## Prerequisites
 
 - [Docker Desktop](https://www.docker.com/get-started/), [Docker Engine](https://docs.docker.com/engine/install/), or another container runtime
-- [Vertica installation](https://www.vertica.com/docs/latest/HTML/Content/Authoring/InstallationGuide/Other/InstallingManually.htm) or [Vertica server image](https://hub.docker.com/r/vertica/vertica-k8s)
-- [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) image
+- [Vertica installation](https://www.vertica.com/docs/latest/HTML/Content/Authoring/InstallationGuide/Other/InstallingManually.htm) or [Vertica server image](https://hub.docker.com/r/opentext/vertica-k8s)
+- [vertica/kafka-scheduler](https://hub.docker.com/r/opentext/kafka-scheduler) image
 - (Optional) [Docker Compose](https://docs.docker.com/compose/install/) to run [example.sh](#examplesh)
 
 ## Installation
@@ -115,7 +115,7 @@ The Makefile contains the following targets:
 A [Compose file](https://docs.docker.com/compose/compose-file/) that starts the following services, each as a container:
 - [Zookeeper](https://hub.docker.com/r/bitnami/zookeeper)
 - [Kafka broker](https://hub.docker.com/r/bitnami/kafka/)
-- [Vertica](https://hub.docker.com/r/vertica/vertica-k8s)
+- [Vertica](https://hub.docker.com/r/opentext/vertica-k8s)
 
 The Compose file creates the `scheduler` network so that the containers can communicate with each other.
 
@@ -136,7 +136,7 @@ The demonstration performs the following steps:
    - Database user
    - Resource pool
    - Two Kafka topics
-2. Downloads the [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) image, then configures a scheduler with the following components:
+2. Downloads the [vertica/kafka-scheduler](https://hub.docker.com/r/opentext/kafka-scheduler) image, then configures a scheduler with the following components:
    - Target Flex table 
    - Parser
    - Kafka source 

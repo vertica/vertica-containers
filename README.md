@@ -12,7 +12,7 @@ For Vertica on Kubernetes containers and resources, see [vertica-kubernetes](htt
 
 The One-Node CE directory provides instructions to build the containerized version of the [Vertica Community Edition (CE)](https://www.vertica.com/landing-page/start-your-free-trial-today/), a free, limited license that Vertica provides as a hands-on introduction to the platform. For an overview, see the [Vertica documentation](https://www.vertica.com/docs/latest/HTML/Content/Authoring/GettingStartedGuide/DownloadingAndStartingVM/DownloadingAndStartingVM.htm).
 
-Vertica publishes the binary version of this container on [DockerHub](https://hub.docker.com/u/vertica) as the [vertica/vertica-ce](https://hub.docker.com/r/vertica/vertica-ce) container.
+Vertica publishes the binary version of this container on [DockerHub](https://hub.docker.com/u/opentext) as the [vertica/vertica-ce](https://hub.docker.com/r/opentext/vertica-ce) container.
 
 
 ## [UDx-container](https://github.com/vertica/vertica-containers/tree/main/UDx-container)
@@ -26,7 +26,7 @@ The UDx-container directory packages in a container the following resources requ
 
 ## [Kafka Scheduler](vertica-kafka-scheduler)
 
-The kafka-scheduler directory provides tools to maintain the official [vertica/kafka-scheduler](https://hub.docker.com/r/vertica/kafka-scheduler) container, or build a custom containerized version of the [Vertica Kafka Scheduler](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/AutomaticallyCopyingDataFromKafka.htm), a standalone Java application that automatically consumes data from one or more Kafka topics and then loads the structured data into Vertica.
+The kafka-scheduler directory provides tools to maintain the official [vertica/kafka-scheduler](https://hub.docker.com/r/opentext/kafka-scheduler) container, or build a custom containerized version of the [Vertica Kafka Scheduler](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/AutomaticallyCopyingDataFromKafka.htm), a standalone Java application that automatically consumes data from one or more Kafka topics and then loads the structured data into Vertica.
 
 The Kafka Scheduler provides the following advantages over manually loading data with COPY statements:
 - Streamed data automatically loads in your database according to the [frame duration](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/ChoosingFrameDuration.htm).
