@@ -7,7 +7,7 @@ ifdef PACKAGE
 
 VERTICA_UNPACKED=$(patsubst %.rpm,%,$(basename $(PACKAGE)))
 VERTICA_INSTALL=$(VERTICA_UNPACKED)/opt/vertica
-VERTICA_VERSION=$(firstword $(subst -, ,$(patsubst vertica_%,%,$(patsubst vertica-%,%,$(basename $(PACKAGE))))))
+VERTICA_VERSION?=$(firstword $(subst -, ,$(patsubst vertica_%,%,$(patsubst vertica-%,%,$(basename $(PACKAGE))))))
 $(VERTICA_INSTALL): $(PACKAGE) ## Unpack $PACKAGE
 	rm -rf $(VERTICA_UNPACKED); \
 	mkdir -p $(VERTICA_UNPACKED); \
@@ -29,7 +29,8 @@ VERTICA_VERSION?=$(shell perl -nE 'my $$v=$$1 if m/Version\s*=\s*"v([\d\.]*)-/; 
 
 endif
 
-TAGS=$(patsubst %,-t vertica/kafka-scheduler:%,$(VERTICA_VERSION))
+IMG?=opentext/kafka-scheduler
+TAGS=$(patsubst %,-t $(IMG):%,$(VERTICA_VERSION))
 SHELL:=/bin/bash
 
 .PHONY: build
@@ -43,7 +44,7 @@ build: $(VERTICA_INSTALL) ## build the docker image
 	rm -rf java kafka
 	cp -r $(VERTICA_INSTALL)/java java
 	cp -r $(VERTICA_INSTALL)/packages/kafka kafka
-	docker build . -t vertica/kafka-scheduler:$(word 1,$(VERTICA_VERSION))
+	docker build . -t $(IMG):$(word 1,$(VERTICA_VERSION))
 	rm -rf java kafka
 
 .PHONY: push
@@ -65,4 +66,4 @@ test: ## suite of tests to make sure everything is working
 
 .PHONY: clean
 clean: ## clean up local directory and docker image created by "make build"
-	docker image rm vertica/kafka-scheduler:$(word 1,$(VERTICA_VERSION))
+	docker image rm $(IMG):$(word 1,$(VERTICA_VERSION))
