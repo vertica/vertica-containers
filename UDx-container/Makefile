@@ -114,7 +114,7 @@ ifeq ($(origin VERTICA_VERSION), undefined)
 	VERTICA_VERSION = $(version)
 endif
 
-CONTAINER_NAME = vertica/verticasdk
+CONTAINER_NAME?=verticasdk
 export CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS_TAG)-v$(VERTICA_VERSION)
 
 # Allow you to add additional build options.
