@@ -193,6 +193,7 @@ RUN set -x \
         sysstat \
         wget \
         which \
+        procps-ng \
  # Allow passwordless sudo access from dbadmin
      && echo "$vertica_db_user ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers \
      # docker daemons versions < 19.03 don't preserve ownership on COPY --from
