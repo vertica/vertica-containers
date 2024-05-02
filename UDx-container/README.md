@@ -20,13 +20,6 @@ Container techology provides the freedom to run environments independently of th
 
 Vertica provides a Dockerfile for different distributions so that you can create an containerized development environment that matches your production environment.
 
-## Vertica
-
-Vertica tests the following versions, but the contents of this repository might work with eariler versions:
-- 12.x
-- 11.x
-- 10.x
-
 ## CentOS
 - 7.9
 
