@@ -95,9 +95,9 @@ endif
 
 ifeq ($(TARGET), rpm)
   TARGET_U=RPM
-  CONTAINER_OS=almalinux
-  CONTAINER_OS_TAG=alma
-  CONTAINER_OS_VERSION ?= 8
+  CONTAINER_OS=docker-registry.verticacorp.com/opentext/redhat
+  CONTAINER_OS_TAG=rhel
+  CONTAINER_OS_VERSION ?= 8.202405.1964547-vertica
 else ifeq ($(TARGET), deb)
   TARGET_U=DEB
   CONTAINER_OS=ubuntu
