@@ -95,9 +95,15 @@ endif
 
 ifeq ($(TARGET), rpm)
   TARGET_U=RPM
-  CONTAINER_OS=docker-registry.verticacorp.com/opentext/redhat
+  # Make it required to enter a base image for rpm builds only 
+  # Must be a rhel based image and must include tag
+  # For example almalinux:8 or almalinux:latest
+  ifndef IMAGE
+    $(error IMAGE is not set. Please pass the IMAGE parameter <image>:<tag>   **Must be valid RHEL-based image for rpm)
+  endif
   CONTAINER_OS_TAG=rhel
-  CONTAINER_OS_VERSION ?= 8.202405.1964547-vertica
+  CONTAINER_OS=$(word 1, $(subst :, , $(IMAGE)))
+  CONTAINER_OS_VERSION=$(word 2, $(subst :, , $(IMAGE)))
 else ifeq ($(TARGET), deb)
   TARGET_U=DEB
   CONTAINER_OS=ubuntu
