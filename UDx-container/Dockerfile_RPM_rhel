@@ -1,0 +1,316 @@
+# -*- mode: shell-script -*-
+# (c) Copyright [2021-2023] Open Text.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+##############################################################################
+##### Start Builder Image
+
+# Dockerfile for RHEL based images
+# Pass in 'DOCKERFILE_SUFFIX=_rhel' to use this dockerfile
+# Ex: make DOCKERFILE_SUFFIX=_rhel IMAGE=redhat:8
+
+# Base operating system
+ARG os_version
+ARG os_image
+
+FROM ${os_image}:${os_version} as builder
+
+ENV VERTICA_OPT_DIR="/opt/vertica"
+ENV VERTICA_VOLUME_DIR="/data"
+ENV VERTICA_DATA_DIR="${VERTICA_VOLUME_DIR}/vertica"
+ENV VERTICA_DB_NAME="vsdk"
+
+ARG vertica_db_user="dbadmin"
+ARG vertica_db_group="verticadba"
+ARG dbadmin_gid=1000
+ARG dbadmin_id=1000
+
+ENV VERTICA_HOME_DIR="/home/$vertica_db_user"
+
+# name of .rpm file
+ARG RPM
+ARG vertica_version
+
+COPY $RPM /tmp/$RPM
+
+# this is a script which removes unnecessary stuff from the
+# container image
+COPY ./tools/cleanup.sh /tmp/
+COPY ./tools/package-checksum-patcher.py /tmp/
+COPY ./tools/init.d.functions /etc/rc.d/init.d/functions
+
+# Add yum repos
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core && yum clean all
+
+# Packages needed to build Vertica
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} dnf group install -y "Development Tools"
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y \
+        ant \
+        autoconf \
+        automake \
+        bc \
+        bison \
+        byacc \
+        bzip2-devel \
+        chrpath \
+        cmake \
+        dialog \
+        dos2unix \
+        doxygen \
+        flex \
+        gcc-c++ \
+        gcc-gfortran \
+        gettext \
+        git-all \
+        glibc-devel \
+        glibc-headers \
+        glibc-langpack-en \
+        glibc-locale-source \
+        glibc-utils \
+        graphviz \
+        intltool \
+        iotop \
+        iproute \
+        java-1.8.0 \
+        jq \
+        libasan \
+        libcurl-devel \
+        libgfortran-* \
+        libgomp-* \
+        libtool \
+        libacl-devel \
+        lsof \
+        make \
+        mlocate \
+        ncurses-devel \
+        nss-pam-ldapd \
+        openldap-clients \
+        openssl-devel \
+        patch \
+        perl-libwww-perl \
+        perl-core \
+        python3 \
+        readline-devel \
+        redhat-rpm-config \
+        rpm-build \
+        rpm-sign \
+        rpmdevtools \
+        rpmlint \
+        rsync \
+        sudo \
+        sysstat \
+        telnet \
+        time \
+        wget \
+        xmlto \
+        && yum clean all
+
+# RHEL8 and their clones don't have a "python" binary, so define the symlink to point to python3.
+# # Helps backards compatibility since many scripts expect just "python" to exist.
+RUN alternatives --set python /usr/bin/python3
+
+# Install Vertica package
+RUN yum localinstall -q -y /tmp/$RPM
+# Cleanup to optimize the size of final image
+RUN rm -rf ${VERTICA_OPT_DIR}/lib64
+
+RUN localedef -i en_US -f UTF-8 en_US.UTF-8
+
+# Create DB user in OS and create python egg cache dir under this user
+# Run install_vertica script to prepare environment
+RUN mkdir -p ${VERTICA_DATA_DIR} \
+     && /usr/sbin/groupadd -r -g $dbadmin_gid $vertica_db_group \
+     # While it is true that install_vertica creates $vertica_db_user
+     # and $vertica_db_group we do it by hand here in order to be able
+     # to specify the UID of the $vertica_db_user
+     && /usr/sbin/useradd -r \
+                          -m \
+                          -s /bin/bash \
+                          --uid $dbadmin_id \
+                          -g $vertica_db_group \
+                          $vertica_db_user \
+ && ${VERTICA_OPT_DIR}/sbin/install_vertica \
+                      --accept-eula \
+                      --data-dir $VERTICA_DATA_DIR \
+                      --dba-group $vertica_db_group \
+                      --dba-user $vertica_db_user \
+                      --dba-user-password-disabled \
+                      --debug \
+                      --failure-threshold NONE \
+                      --hosts 127.0.0.1 \
+                      --ignore-aws-instance-type \
+                      --ignore-install-config \
+                      --license CE \
+                      --no-system-configuration \
+                      --point-to-point \
+                      --no-ssh-key-install \
+                      -U
+
+RUN chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \
+    && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
+    && chmod 755 ${VERTICA_HOME_DIR}
+
+# docker daemons versions < 19.03 don't preserve ownership on COPY --from
+# but doing the chown -R in the second half is costly in terms of
+# image size, so we compromise by making everything group writable in
+# /opt/vertica:
+RUN chmod -R g+w ${VERTICA_OPT_DIR}
+
+RUN sh /tmp/cleanup.sh
+
+##### End Builder Image
+############################################################################
+
+
+############################################################################
+##### Start Final Image
+
+FROM ${os_image}:${os_version}
+
+ARG vertica_db_user="dbadmin"
+ARG vertica_db_group="verticadba"
+
+ARG dbadmin_gid=1000
+ARG dbadmin_id=1000
+
+ENV VERTICA_OPT_DIR="/opt/vertica"
+ENV VERTICA_OPT_BIN="${VERTICA_OPT_DIR}/bin"
+ENV VERTICA_HOME_DIR="/home/$vertica_db_user"
+ENV VERTICA_VOLUME_DIR="/data"
+ENV VERTICA_DATA_DIR="${VERTICA_VOLUME_DIR}/vertica"
+ENV VERTICA_DB_NAME="vsdk"
+ENV PYTHON_EGG_CACHE="/tmp/.python-eggs"
+
+COPY --from=builder $VERTICA_OPT_DIR $VERTICA_OPT_DIR
+COPY --from=builder $VERTICA_DATA_DIR $VERTICA_DATA_DIR
+
+ADD ./tools/package-checksum-patcher.py /tmp/
+ADD ./tools/init.d.functions /etc/rc.d/init.d/functions
+
+# Recreate DB user in OS and create python egg cache dir under this user
+# in this stage of the build, we want to reduce the number of layers
+RUN set -x \
+    # COPY doesn't preserve the mode of the top-level
+    && chmod g+w ${VERTICA_OPT_DIR} \
+    && /usr/sbin/groupadd -r -g $dbadmin_gid $vertica_db_group \
+    && /usr/sbin/useradd -r \
+                          -m \
+                          -s /bin/bash \
+                          --uid $dbadmin_id \
+                          # add dbadmin to root to work around COPY
+                          # not preserving owner and group prior to
+                          # docker version 19.03
+                          -G root \
+                          -g $vertica_db_group \
+                          $vertica_db_user \
+    && su - $vertica_db_user -c "mkdir $PYTHON_EGG_CACHE" 
+    
+# Add yum repos
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core && yum clean all
+
+# Install Prerequisites
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} dnf group install -y "Development Tools"
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y \
+        # Install the same things from the builder
+        cronie \
+        dialog \
+        gcc-c++ \
+        glibc-static \
+        gdb \
+        iproute \
+        libstdc++-static \
+        make \
+        mcelog \
+        openssh-server \
+        openssh-clients \
+        openssl \
+        sudo \
+        sysstat \
+        wget \
+        which \
+        # Packages needed to build Vertica UDxes
+        binutils \
+        boost \
+        bzip2-devel \
+        cmake \
+        doxygen \
+        expat \
+        flex \
+        gcc-c++ \
+        gcc-gfortran \
+        gettext \
+        git-all \
+        glibc-devel \
+        glibc-headers \
+        glibc-langpack-en \
+        glibc-locale-source \
+        glibc-utils \
+        less \
+        imake \
+        iproute \
+        libasan \
+        libcurl-devel \
+        libgfortran-* \
+        libgomp-* \
+        libtool \
+        libacl-devel \
+        nasm \
+        openssl-devel \
+        readline-devel \
+        tar \
+        vim \
+        && yum clean all \                
+      # Allow passwordless sudo access from any user
+      && echo "ALL ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers \
+      # docker daemons versions < 19.03 don't preserve ownership on COPY --from
+      # so we have to chown these things again
+        && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_DATA_DIR} \
+        && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
+        && chmod 755 ${VERTICA_HOME_DIR} 
+         
+RUN localedef -i en_US -f UTF-8 en_US.UTF-8
+
+# vertica v10 (and earlier, but 10 is what we're interested in enough
+# to test) vertica_agent script uses the rpm command to find out where
+# Vertica is installed.  But we threw the 900-1200 MB of rpm info away
+# when we did the multi-stage build.  v11 and subsequent used a
+# different technique more compatible with what we're doing with
+# containers
+ADD ./tools/vertica_agent.11 /tmp/
+ADD ./tools/vertica_agent_patch.sh /tmp/
+RUN bash /tmp/vertica_agent_patch.sh
+
+ADD ./env_setup/vertica_env.sh /etc/profile.d/
+COPY entrypoint.sh /opt/vertica/bin/entrypoint.sh
+
+# DB is running under vertica_db_user, not under root
+USER $vertica_db_user
+
+WORKDIR ${VERTICA_HOME_DIR}
+
+VOLUME ${VERTICA_VOLUME_DIR}
+
+ENTRYPOINT  [ "/opt/vertica/bin/entrypoint.sh" ]
+
+# vertica port
+EXPOSE 5433
+# vertica agent port
+EXPOSE 5444
+
+LABEL image_name="vertica_udx_development"
+LABEL os_family="$CONTAINER_OS"
+LABEL os_version="$CONTAINER_OS_VERSION"
+LABEL vertica_version="$VERTICA_VERSION"
+LABEL maintainer="K8 Team"
+
+##### End Final Image
+############################################################################
