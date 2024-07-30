@@ -45,6 +45,9 @@ COPY ./tools/package-checksum-patcher.py /tmp/
 COPY ./tools/init.d.functions /etc/rc.d/init.d/functions
 
 # Add yum repos
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y epel-release && yum clean all
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core epel-release && yum clean all
+RUN yum config-manager --enable powertools
 RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core && yum clean all
 
 # Packages needed to build Vertica
@@ -211,6 +214,9 @@ RUN set -x \
     && su - $vertica_db_user -c "mkdir $PYTHON_EGG_CACHE" 
     
 # Add yum repos
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y epel-release && yum clean all
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core epel-release && yum clean all
+RUN yum config-manager --enable powertools
 RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core && yum clean all
 
 # Install Prerequisites
