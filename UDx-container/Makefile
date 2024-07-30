@@ -95,14 +95,24 @@ endif
 
 ifeq ($(TARGET), rpm)
   TARGET_U=RPM
-  CONTAINER_OS=almalinux
-  CONTAINER_OS_TAG=alma
+  CONTAINER_OS ?= almalinux
+  CONTAINER_OS_TAG ?= alma
   CONTAINER_OS_VERSION ?= 8
 else ifeq ($(TARGET), deb)
   TARGET_U=DEB
   CONTAINER_OS=ubuntu
   CONTAINER_OS_TAG=ubuntu
   CONTAINER_OS_VERSION ?= 20.04
+endif
+
+# Accept IMAGE arg for custom base image *Must be RHEL based
+# Only for rpm builds
+ifeq ($(TARGET), rpm)
+  ifdef IMAGE
+    CONTAINER_OS_TAG=rhel
+    CONTAINER_OS=$(word 1, $(subst :, , $(IMAGE)))
+    CONTAINER_OS_VERSION=$(word 2, $(subst :, , $(IMAGE)))
+  endif
 endif
 
 # The user hasn't handed us a VERTICA_VERSION

@@ -45,14 +45,11 @@ COPY ./tools/package-checksum-patcher.py /tmp/
 COPY ./tools/init.d.functions /etc/rc.d/init.d/functions
 
 # Add yum repos
-RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y epel-release && yum clean all
-RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core epel-release && yum clean all
-RUN yum config-manager --enable powertools
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core && yum clean all
 
 # Packages needed to build Vertica
 RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} dnf group install -y "Development Tools"
 RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y \
-        alien \
         ant \
         autoconf \
         automake \
@@ -60,13 +57,11 @@ RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum insta
         bison \
         byacc \
         bzip2-devel \
-        ccache \
         chrpath \
         cmake \
         dialog \
         dos2unix \
         doxygen \
-        dpkg \
         flex \
         gcc-c++ \
         gcc-gfortran \
@@ -216,9 +211,7 @@ RUN set -x \
     && su - $vertica_db_user -c "mkdir $PYTHON_EGG_CACHE" 
     
 # Add yum repos
-RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y epel-release && yum clean all
-RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core epel-release && yum clean all
-RUN yum config-manager --enable powertools
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core && yum clean all
 
 # Install Prerequisites
 RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} dnf group install -y "Development Tools"
