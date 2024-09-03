@@ -1,4 +1,4 @@
-FROM alpine:3.14
+FROM alpine:3.20
 RUN apk add --no-cache openjdk8-jre bash
 
 RUN mkdir -p /opt/vertica/log
