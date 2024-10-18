@@ -130,14 +130,16 @@ export CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS_TAG)-v$(VERTICA_VERSION)
 # Allow you to add additional build options.
 ADDITIONAL_BUILD_OPTS?=
 
+# Debugging the ln command in the build below lp-docker26-test
+$(info PACKAGE is [$(PACKAGE)])
+$(info VERTICA_RPM is [$(VERTICA_RPM)])
+
 # Development hint: Defining ${DOCKERFILE_SUFFIX} makes it easier to
 # try variations on the Dockerfile
 build: display Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} ## Build container given PACKAGE=<file>
 	docker pull ${CONTAINER_OS}:${CONTAINER_OS_VERSION} ## make sure we use the latest image
 	# This lets you have the RPM or DEB file in another directory (on this filesystem) 
 	# link/copy rpm file to local directory and clean it up when done
-        echo "Package: $(PACKAGE)"
-        echo "Vertica RPM: $(VERTICA_RPM)"
 	ln $(PACKAGE) vertica.$$$$.rpm 2>/dev/null || cp $(VERTICA_RPM) vertica.$$$$.rpm || exit 1 ; \
 	trap "rm -f vertica.$$$$.rpm" EXIT INT; \
 	docker build \
