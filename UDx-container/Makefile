@@ -138,13 +138,9 @@ $(info VERTICA_RPM is [$(VERTICA_RPM)])
 # try variations on the Dockerfile
 build: display Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} ## Build container given PACKAGE=<file>
 	docker pull ${CONTAINER_OS}:${CONTAINER_OS_VERSION} ## make sure we use the latest image
-	# This lets you have the RPM or DEB file in another directory (on this filesystem) 
-	# link/copy rpm file to local directory and clean it up when done
-	ln $(PACKAGE) vertica.$$$$.rpm 2>/dev/null || cp $(PACKAGE) vertica.$$$$.rpm || exit 1 ; \
-	trap "rm -f vertica.$$$$.rpm" EXIT INT; \
 	docker build \
 		-f Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} \
-		--build-arg $(TARGET_U)=vertica.$$$$.rpm \
+		--build-arg $(TARGET_U)=$(PACKAGE) \
 		--build-arg os_version=$(CONTAINER_OS_VERSION) \
 		--build-arg os_image=$(CONTAINER_OS) \
 		--build-arg vertica_version=$(VERTICA_VERSION) \
