@@ -130,10 +130,6 @@ export CONTAINER_TAG = $(CONTAINER_NAME):$(CONTAINER_OS_TAG)-v$(VERTICA_VERSION)
 # Allow you to add additional build options.
 ADDITIONAL_BUILD_OPTS?=
 
-# Debugging the ln command in the build below lp-docker26-test
-$(info PACKAGE is [$(PACKAGE)])
-$(info VERTICA_RPM is [$(VERTICA_RPM)])
-
 # Development hint: Defining ${DOCKERFILE_SUFFIX} makes it easier to
 # try variations on the Dockerfile
 build: display Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} ## Build container given PACKAGE=<file>
