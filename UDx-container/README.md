@@ -11,21 +11,20 @@ For additional details about developing Vertica UDxs, see [Extending Vertica](ht
 ## Prerequisites
 - [Docker Desktop](https://www.docker.com/get-started) or [Docker Engine](https://docs.docker.com/engine/install/)
 - Vertica RPM or DEB file
-- vsql driver and other applicable [client libraries](https://www.vertica.com/download/vertica/client-drivers/)
+- A running Vertica database: In case you want to test your UDx
 - [Python 3](https://www.python.org/downloads/)
 
 # Supported Platforms
 
-Container techology provides the freedom to run environments independently of the host operating system. For example, you can run a CentOS container on an Ubuntu workstation, and vice versa.
+Container techology provides the freedom to run environments independently of the host operating system. For example, you can run an AlmaLinux container on an Ubuntu workstation, and vice versa.
 
-Vertica provides a Dockerfile for different distributions so that you can create an containerized development environment that matches your production environment.
+Vertica provides a Dockerfile for different distributions so that you can create an containerized development environment that matches your production environment. By
 
-## CentOS
-- 7.9
+## AlmaLinux
+- 8
 
 ## Ubuntu
 - 20.04
-- 18.04
 
 
 # Overview
@@ -34,7 +33,7 @@ The Vertica UDx container packages the binaries, libraries, and compilers requir
 
 In addition, this repository provides `vsdk-*` commmand line tools to simplify the development process. You can develop UDxs on your host machine, compile them within the UDx container, and then save the object files on your host machine to load into Vertica.
 
-In addition, the `vsdk-vertica` command launches a container with a running Vertica instance. You can use this container to load and test your UDx without interfering with your production system.
+Use your running database to test the UDx.
 
 # Build the UDx container
 
@@ -46,26 +45,26 @@ You can include build variables in the build process to customize the container.
 
 | Name                      | Definition |
 |:--------------------------|:-----------|
-| `OSTAG` | The container operating system distribution, either `centos` or `ubuntu`. This variable is required to build a container that runs an OS that is different from the host OS. |
+| `CONTAINER_OS_TAG` | The container operating system distribution, either `alma` or `ubuntu`. This variable is required to build a container that runs an OS that is different from the host OS. |
 | `PACKAGE` | When there is more than one Vertica RPM or DEB file in the top-level directory, this variable specifies which file to use in the build process. |
 | `TARGET` | Required. The file type of the Vertica binary that you use in the build process.<br>Accepts `rpm` or `deb`. |
 | `VERTICA_VERSION` | The version number of the Vertica binary used in the build process. This value is optional for a [canonically-named Vertica binary](#building-with-a-canonically-named-vertica-binary).<br> You can use this variable to build containers for different Vertica versions. |
 
-You might build multiple containers to develop UDxs for multiple Vertica versions. To help distinguish among containers, define `OSTAG` and `VERTICA_VERSION` in the build command. If you set `OSTAG=centos` and `VERTICA_VERSION=11.0.0-0`, the full container specification is `verticasdk:centos-11.0.0-0`.
+You might build multiple containers to develop UDxs for multiple Vertica versions. To help distinguish among containers, define `CONTAINER_OS_TAG` and `VERTICA_VERSION` in the build command. If you set `CONTAINER_OS_TAG=alma` and `VERTICA_VERSION=25.4.0-0`, the full container specification is `verticasdk:alma-25.4.0-0`.
 
 ## Building with a canonically-named Vertica binary
 
 The build process requires the Vertica version. The `Makefile` can extract this information automatically from a canonically-named RPM or DEB file in one of the following formats:
 
 ```shell
-$ vertica-10.1.1-5.x86_64.RHEL6.rpm
+$ vertica-25.4.0-0.x86_64.RHEL8.rpm
 ```
 
 ```shell
-$ vertica_10.0.1-5_amd64.deb
+$ vertica_25.4.0-0_amd64.deb
 ```
 
-The `Makefile` extracts the Vertica version (`10.1.1-5`) and the OS distribution version (`RHEL6`). If the Vertica binary uses this format, run `make` with the `TARGET` variable to build the container. For example, the following command builds a UDx container with a canonically-named RPM file:
+The `Makefile` extracts the Vertica version (`25.4.0-0`) and the OS distribution version (`RHEL8`). If the Vertica binary uses this format, run `make` with the `TARGET` variable to build the container. For example, the following command builds a UDx container with a canonically-named RPM file:
 
 ```shell
 $ make TARGET=rpm
@@ -100,6 +99,8 @@ Run `make test` with the `TARGET` environment variable:
 $ make test TARGET=deb
 ```
 > **NOTE**: The scripts require the container tag, which is derived from the `VERTICA_VERSION` environment variable. If you have a canonically-named RPM or DEB file, the `Makefile` extracts the `VERTICA_VERSION` from the filename. Otherwise you must specify the tag the same way that you did when you created the container.
+>
+>You can also simply set the container tag through the `VSDK_IMAGE` variable 
 
 # Develop UDxs
 
@@ -114,10 +115,10 @@ This repository provides `vsdk-*` scripts to help you test and compile your UDx 
 
 These scripts use the contents of `/etc/os-release` to determine whether the container has a `centos` or `ubuntu` tag. If your host uses a different distribution than your development environment, you can edit `vsdk-bash` directly to change the default setting.
 
-Alternatively, you can interactively define the operating system with the `OSTAG` [environment variable](#environment-variables) when you execute `vsdk-make`. To simplify this workflow, you can create a shell alias that defines `OSTAG`:
+Alternatively, you can interactively define the operating system with the `CONTAINER_OS_TAG` [environment variable](#environment-variables) when you execute `vsdk-make`. To simplify this workflow, you can create a shell alias that defines `CONTAINER_OS_TAG`:
 
 ```shell
-alias vsdk-make='OSTAG=ubuntu path/to/vsdk-make'
+alias vsdk-make='CONTAINER_OS_TAG=ubuntu path/to/vsdk-make'
 ```
 For additional details, see [Compile UDxs](#compile-udxs).
 
@@ -127,7 +128,8 @@ The following table describes the environment variables that you can set to prov
 
 | Environment&nbsp;Variable | Description |
 |:--------------------------|:------------|
-| `OSTAG` | The container operating system distribution, either `centos` or `ubuntu`. This variable is if you use a container that runs an OS that is different from the host OS. If you do not define this variable, `vsdk-make` reads `/etc/os-release` to determine the OS. |
+| `VSDK_IMAGE` | The container image to use to run the container. When set, you do not need to set OS. If you locally built the image, it is better to use this variable to run a container. |
+| `CONTAINER_OS_TAG` | The container operating system distribution, either `centos` or `ubuntu`. This variable is if you use a container that runs an OS that is different from the host OS. If you do not define this variable, `vsdk-make` reads `/etc/os-release` to determine the OS. |
 | `VERTICA_VERSION` | The version number of the Vertica binary used in the build process. |
 | `VSDK_ENV` | Optional file that defines environment variables for `vsdk-*` commands that run in the container. For formatting details, see [Declare default environment variables in file](https://docs.docker.com/compose/env-file/) in the Docker documentation.|
 | `VSDK_MOUNT` | A list of one or more directories that you want to mount in the UDx container filesystem. To mount multiple directories, separate each path with a space. For additional details, see [Mounting additional files](#mounting-additional-files). |
@@ -148,7 +150,7 @@ We use a build process based on the `make` paradigm, with build instructions enc
    ```
 3. Run `vsdk-make` with the required environment variables:
    ```shell 
-   $ VERTICA_VERSION=<vertica-version> OSTAG=ubuntu vsdk-make TARGET=deb
+   $ VERTICA_VERSION=<vertica-version> CONTAINER_OS_TAG=ubuntu vsdk-make TARGET=deb
    ```
    Additionally, you can use `VSDK_ENV` to pass a file that contains the environment variables:
    ```shell
@@ -199,99 +201,20 @@ In the previous diagram:
 
 ## Make the UDx available to the test Vertica server
 
-To make your UDx available to the test Vertica server, start the server in your UDx working directory. This provides the test Vertica server container a path to your UDx working directory when it starts so it can mount its current working directory. The Vertica in the container runs as `dbadmin`.
+To test your UDx, you now need access to a running Vertica server. The UDx must be in a folder that is accessible by the Vertica server. If your Vertica server is running in a containerized environment (such as Docker or Kubernetes), you need to mount your UDx directory into the Vertica server container or pod so Vertica can access the UDx shared library and related files.
 
-
-## Start the test Vertica server
-
-In addition to the `vsdk-make` and `vsdk-g++` tools, there is a `vsdk-vertica` command that creates a scratch Vertica server so you can test your UDx.  `vsdk-make` and friends merely execute in the container's namespace.  The container doesn't persist and cannot be shared.  `vsdk-vertica`, in contrast, creates a long-lived environment that can be shared (the `run-dbadmin-shell-in-container.sh` script executes inside that container, if present).  This persistence means that the `vsdk-vertica` container must be stopped explicitly. 
-
-### Filesystems used by the verticasdk container
-
-The UDx container itself is not writable, so it creates and mounts a Docker volume called `verticasdk-data-username` (where `username` is your user name). It also mounts the current working directory and your home directory in the container using the same names those directories have on the host machine. In addition, `vsdk-vertica` understands the `VSDK_MOUNT` and `VSDK_ENV` [environment variables](#environment-variables).
-
-## Fetch the test Vertica server startup log
-
-`vsdk-vertica` launches a server that runs in the background in a container named `verticasdk-username` (where, once again `username` is your user name. The command outputs the following message:
-
-```shell
-./vsdk-vertica
-Starting container...
-
-Run
-      docker logs verticasdk-username
-to view startup progress
-
-Don't stop container until above command prints 'Vertica is now running'
-To stop:
-    docker stop verticasdk-username
-
-When executing outside of a VSDK container, you can connect to this Vertica
-using
-    vsql -p 11233
-
-If executing inside a the VSDK container (e.g., using run-dbadmin-shell-in-container) 
-just 'vsql' should suffice
-```
-
-You can read the container log using the `docker logs` command:
-
-```shell
-docker logs verticasdk-username
-```
-
-But also note the instructions for running vsql to talk to the Vertica in the vsdk-container:
-
-```shell
-When executing outside of a VSDK container, you can connect to this vertica
-using
-    vsql -p 11233 -U dbadmin
-```
-
-Outside the VSDK container, the Vertica port is mapped to (in this example case) the non-standard port `11233`.  The port number is chosen at random each time.  The `-U dbadmin` connects to Vertica as the DBADMIN user. The database does not have any other users defined. DBADMIN has a blank password in this container's database, and has permission to manipulate UDx libraries in the container's database.
-
-## Stop and remove the test Vertica server
-
-Stop the container with `docker stop`:
-
-```shell
-docker stop verticasdk
-```
-Remove the container with `docker rm`:
-
-```shell
-docker rm verticasdk
-```
-
-When you are done with the container, it is recommended that you also remove the Docker volume it mounts as a scratch database:
-
-```shell
-docker volume rm verticasdk-data
-```
 
 ## Load your UDx into the test Vertica server
 
-When the test Vertica server is ready, you can use `vsql` to load the UDx. The following commands load the `AggregateFunctions` library and execute some functions from it:
+When the test Vertica server is ready, you can use `vsql` to load the UDx. The following commands load dblink library (previously compiled):
 
-```shell
-$ cd tmp-test/examples
-$ vsql -U dbadmin -f AggregateFunctions.sql
+```sql
+CREATE OR REPLACE LIBRARY dblink AS '/tmp/ldblink.so' LANGUAGE 'C++';
+   CREATE OR REPLACE TRANSFORM FUNCTION dblink AS LANGUAGE 'C++' NAME 'DBLinkFactory' LIBRARY dblink ;
+  GRANT EXECUTE ON TRANSFORM FUNCTION dblink() TO PUBLIC ;
+  GRANT USAGE ON LIBRARY dblink TO PUBLIC ;
 ```
 To view `AggregateFunctions.sql` and other example library SQL files, see `/opt/vertica/sdk/examples`.
 
-For additional details about working with UDx libraries, see [User-Defined Extensions](https://www.vertica.com/docs/latest/HTML/Content/Authoring/ExtendingVertica/UsingUserDefinedExtensions.htm).
+For additional details about loading a library containing user-defined extensions (UDxs) into the database catalog, see [User-Defined Extensions](https://docs.vertica.com/25.4.x/en/sql-reference/statements/create-statements/create-library/).
 
-## Using `run-dbadmin-shell-in-container.sh`
-
-Should the need arise to run dbadmin administrative functions such as `admintools` in the running Vertica container, we provide an additional command, `run-dbadmin-shell-in-container.sh`.
-
-`run-dbadmin-shell-in-container.sh` has the following arguments:
-
- - `-d dir` -- specify the directory where `cid.txt` may be found
- - `-h` -- print a help message
- - `-n name` -- run in the container named `name`
- - `-u N` -- use `N` (a UID as a number) for the dbadmin-id
-
-One must specify one of `-d directory` or `-n container-name`.  Otherwise, arguments are optional.
-
-When invoked, it will give you a shell executing in the same container as your Vertica server, where you may run `admintools`, read the Vertica logfile, and any other dbadmin activities that may help you debug problems with your UDx.
