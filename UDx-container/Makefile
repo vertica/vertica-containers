@@ -83,17 +83,17 @@ else
 endif
 
 # make sure there is just 1
+ifeq ($(words $(PACKAGE)),1)
+  $(warning "PACKAGE is [${PACKAGE}]")
+  TARGET := $(patsubst %.deb,deb,$(patsubst %.rpm,rpm,$(PACKAGE)))
+endif
+
 check_package_count:
 	@if [ $(words $(PACKAGE)) -eq 0 ]; then \
 		echo "No ${TARGET} in directory."; exit 2; \
 	elif [ $(words $(PACKAGE)) -gt 1 ]; then \
 		echo "Too many RPMs and DEBs in directory: ${PACKAGE} - Use 'make PACKAGE=verticaXXX.xxx'"; exit 2; \
 	fi
-
-ifeq ($(words $(PACKAGE)),1)
-	$(warning "PACKAGE is [${PACKAGE}]")
-	TARGET := $(patsubst %.deb,deb,$(patsubst %.rpm,rpm,$(PACKAGE)))
-endif
 
 ifeq ($(TARGET), rpm)
   TARGET_U=RPM
