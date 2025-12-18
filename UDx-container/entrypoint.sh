@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# entrypoint script for UDx container
+# entrypoint script for UDx development container
 
 # The container is meant to be invoked by the vsdk-* family of
 # commands, which mount many of the user's directories and prepare a
@@ -25,134 +25,9 @@ if [[ -n $VERTICA_DEBUG_ENTRYPOINT ]] ; then
   set -x
 fi
 
-# The following would be more comfortable if there was an
-# /etc/passwd containing a name for the UID executing this container
-# and an /etc/group containing a name for the GID
-# source /etc/profile
-
-VSQL=/opt/vertica/bin/vsql
 vsdk_dir="$1"
 vsdk_cmd="$2"
 
-ADMINTOOLS="${VERTICA_OPT_DIR}/bin/admintools"
-: ${VERTICA_OPT_DIR:="/opt/vertica"}
-: ${VERTICA_VOLUME_DIR:="/data"}
-: ${VERTICA_DATA_DIR:="${VERTICA_VOLUME_DIR}/vertica"}
-: ${VERTICA_DB_NAME:="vsdk"}
-
-# Vertica should be shut down properly
-function shut_down() {
-    echo "Shutting Down"
-    vertica_proper_shutdown
-    echo 'Stopping loop'
-    STOP_LOOP="true"
-}
-
-function vertica_proper_shutdown() {
-    db=$(${ADMINTOOLS} -t show_active_db)
-    case "$db" in
-        ("")
-            echo "Database not running --- shutting down"
-            ;;
-        (*)
-            echo 'Vertica: Closing active sessions'
-            ${VSQL} -c 'SELECT CLOSE_ALL_SESSIONS();'
-            echo 'Vertica: Flushing everything on disk'
-            ${VSQL} -c 'SELECT MAKE_AHM_NOW();'
-            echo 'Vertica: Stopping database'
-            ${ADMINTOOLS} -t stop_db -d $VERTICA_DB_NAME -i
-            ;;
-    esac
-}
-
-function preserve_config() {
-    # unfortunately, admintools doesn't (always) obey symlinks when
-    # manipulating its admintools.conf file, so we have to move the
-    # entire config directory
-    if ! [[ -f ${VERTICA_DATA_DIR}/config/admintools.conf ]]; then
-        # first time through docker-entrypoint.sh we need to move
-        # the config directory to persistent store
-        sudo cp --archive ${VERTICA_OPT_DIR}/config ${VERTICA_DATA_DIR}
-        sudo chown -R ${VERTICA_DB_USER} ${VERTICA_DATA_DIR}/config
-    fi
-    # unfortunately, the symlink is in the container image
-    # so we have to renew it each time if a shared volume is used for $VERTICA_VOLUME_DIR
-    if [ ! -L ${VERTICA_OPT_DIR}/config ]; then
-        echo "symlink ${VERTICA_OPT_DIR}/config -> ${VERTICA_DATA_DIR}/config"
-        sudo rm -rf ${VERTICA_OPT_DIR}/config
-        sudo ln -snf  ${VERTICA_DATA_DIR}/config  ${VERTICA_OPT_DIR}/config
-    fi
-}
-
-function initialize_vertica_directories() {
-    # We only do this if necessary
-    if [ ! -d ${VERTICA_DATA_DIR}/${VERTICA_DB_NAME} ]; then
-        # first time through --- create db, etc.
-        mkdir -p ${VERTICA_DATA_DIR}/config
-        preserve_config
-        echo 'Creating database'
-
-        ${ADMINTOOLS} -t create_db \
-                      --skip-fs-checks \
-                      -s localhost \
-                      --database=$VERTICA_DB_NAME \
-                      --catalog_path=${VERTICA_DATA_DIR} \
-                      --data_path=${VERTICA_DATA_DIR}
-        ${ADMINTOOLS} -t view_cluster
-        return $?
-    else
-        return 0
-    fi
-}
-
-function start_vertica() {
-    # ${VERTICA_OPT_DIR}/config/admintools.conf is the unmodified container
-    # copy, but we symlinked it the first time through, and have to
-    # recreate that symlink
-    preserve_config
-    echo 'Starting Database'
-    if ${ADMINTOOLS} -t start_db \
-                  --database=$VERTICA_DB_NAME \
-                  --noprompts; then
-        echo "Vertica is now running"
-        return 0
-    else
-        echo "Admintools was unable to start Vertica"
-        return 1
-    fi
-}
-
-# A container that runs Vertica hangs around until Vertica exits ---
-# it exists to provide a Vertica server to interact with.
-#
-# A container that runs commands like cp, bash, gcc, make, etc., is
-# used to provide an environment for those commands to execute in.
-# When the command completes, the container goes away.
-case $vsdk_cmd in
-    vertica*)
-        STOP_LOOP=false
-        trap "shut_down" SIGKILL SIGTERM SIGHUP SIGINT
-
-        if ( initialize_vertica_directories || start_vertica ); then
-            echo "Vertica is now running"
-            
-            while [ "${STOP_LOOP}" == "false" ]; do
-                # We could use admintools -t show_active_db to see if the
-                # db is still running, and restart it if it isn't
-                sleep 10
-            done
-        else
-            echo looping so you can attach and debug
-            while [ "${STOP_LOOP}" == "false" ]; do
-                # We could use admintools -t show_active_db to see if the
-                # db is still running, and restart it if it isn't
-                sleep 10
-            done
-
-        fi
-        ;;
-    *)
-        cd "$vsdk_dir"
-        sh -c "$vsdk_cmd"
-        ;;
-esac
+# Execute the development command in the specified directory
+cd "$vsdk_dir"
+sh -c "$vsdk_cmd"

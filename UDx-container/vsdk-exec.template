@@ -19,13 +19,13 @@
 # most of the option-setting for this script is done using environment
 # variables.
 #
-# For example, $OSTAG-v$VERTICA_VERSION is used to define the docker image
-# (e.g., vertica/verticasdk:centos-v11.0.0).  So, if you have multiple
+# For example, $CONTAINER_OS_TAG-v$VERTICA_VERSION is used to define the docker image
+# (e.g., opentext/vertica-sdk:centos-v11.0.0).  So, if you have multiple
 # verticavsdk images lying around, you can select among them by
 # defining these variables in the environment.
 #
 # VSDK_IMAGE: select your docker image directly
-# OSTAG: one of { centos, ubuntu } --- selects the docker image OS
+# CONTAINER_OS_TAG: one of { centos, ubuntu } --- selects the docker image OS
 #       version (presumably different from the host operating system,
 #       as otherwise the script just picks it up from
 #       /etc/os-release).
@@ -50,37 +50,37 @@ if [[ $CMD == exec ]]; then
 fi
 
 if [[ -z $VSDK_IMAGE ]]; then
-    if [[ -z $OSTAG ]]; then
-        # The user can default the OS selection by defining OSTAG in the
+    if [[ -z $CONTAINER_OS_TAG ]]; then
+        # The user can default the OS selection by defining CONTAINER_OS_TAG in the
         # environment (mostly for testing)
         . /etc/os-release
         
         case $ID in
-            (rhel) OSTAG=centos ;;
-            (ubuntu) OSTAG=ubuntu ;;
-            (*) OSTAG=centos ;;
+            (rhel) CONTAINER_OS_TAG=centos ;;
+            (ubuntu) CONTAINER_OS_TAG=ubuntu ;;
+            (*) CONTAINER_OS_TAG=centos ;;
         esac
-        WARNINGS+=("WARNING: Guessing OSTAG $OSTAG. Set VSDK_IMAGE to avoid this warning")
+        WARNINGS+=("WARNING: Guessing CONTAINER_OS_TAG $CONTAINER_OS_TAG. Set VSDK_IMAGE to avoid this warning")
     fi
     
     VERTICA_VERSION=${VERTICA_VERSION:++DEFAULT_VERTICA_VERSION++}
     
-    if [[ -n $OSTAG && -n $VERTICA_VERSION ]]; then
-        VSDK_IMAGE=vertica/verticasdk:$OSTAG-v$VERTICA_VERSION
+    if [[ -n $CONTAINER_OS_TAG && -n $VERTICA_VERSION ]]; then
+        VSDK_IMAGE=opentext/vertica-sdk:$CONTAINER_OS_TAG-v$VERTICA_VERSION
     else
         # Is there only one image?  Let's just print a warning.
-        VSDK_IMAGE=$(docker image ls vertica/verticasdk --format "{{.Repository}}:{{.Tag}}")
-        if [[ $VSDK_IMAGE =~ ^vertica/verticasdk:(centos|ubuntu)-v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$ ]]; then
+        VSDK_IMAGE=$(docker image ls opentext/vertica-sdk --format "{{.Repository}}:{{.Tag}}")
+        if [[ $VSDK_IMAGE =~ ^opentext/vertica-sdk:(centos|ubuntu)-v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$ ]]; then
             WARNINGS+=("WARNING: Using image $VSDK_IMAGE. Set VSDK_IMAGE to avoid this warning")
         else
-            echo "ERROR: Set VSDK_IMAGE to vertica/verticasdk:<OSTAG>-v<VERTICA_VERSION>" >&2
+            echo "ERROR: Set VSDK_IMAGE to opentext/vertica-sdk:<CONTAINER_OS_TAG>-v<VERTICA_VERSION>" >&2
             exit 1
         fi
     fi
 fi
 
 # ALSO_IN_PATH will be used in set_container_path
-case $OSTAG in
+case $CONTAINER_OS_TAG in
     centos)
         BINDIR=/usr/bin 
         ALSO_IN_PATH=/bin
@@ -88,6 +88,15 @@ case $OSTAG in
     ubuntu)
         BINDIR=/bin
         ALSO_IN_PATH=/usr/bin
+        ;;
+    *)
+        if [[ $TARGET == "rpm" ]]; then
+            BINDIR=/bin
+            ALSO_IN_PATH=/usr/bin
+        else
+            BINDIR=/usr/bin 
+            ALSO_IN_PATH=/bin
+        fi
         ;;
 esac
 # must follow the definition of BINDIR

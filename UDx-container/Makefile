@@ -83,15 +83,17 @@ else
 endif
 
 # make sure there is just 1
-ifeq ($(words $(PACKAGE)),0)
-  $(error "No ${TARGET} in directory.")
-else ifeq ($(words $(PACKAGE)),1)
-  $(warning "PACKAGE is [${PACKAGE}]")	
-  # extract target from package
+ifeq ($(words $(PACKAGE)),1)
+  $(warning "PACKAGE is [${PACKAGE}]")
   TARGET := $(patsubst %.deb,deb,$(patsubst %.rpm,rpm,$(PACKAGE)))
-else
-  $(error "Too many RPMs and DEBs in directory: ${PACKAGE} - Use 'make PACKAGE=verticaXXX.xxx'")
 endif
+
+check_package_count:
+	@if [ $(words $(PACKAGE)) -eq 0 ]; then \
+		echo "No ${TARGET} in directory."; exit 2; \
+	elif [ $(words $(PACKAGE)) -gt 1 ]; then \
+		echo "Too many RPMs and DEBs in directory: ${PACKAGE} - Use 'make PACKAGE=verticaXXX.xxx'"; exit 2; \
+	fi
 
 ifeq ($(TARGET), rpm)
   TARGET_U=RPM
@@ -102,7 +104,7 @@ else ifeq ($(TARGET), deb)
   TARGET_U=DEB
   CONTAINER_OS=ubuntu
   CONTAINER_OS_TAG=ubuntu
-  CONTAINER_OS_VERSION ?= 20.04
+  CONTAINER_OS_VERSION ?= 22.04
 endif
 
 # Accept IMAGE arg for custom base image *Must be RHEL based
@@ -132,7 +134,7 @@ ADDITIONAL_BUILD_OPTS?=
 
 # Development hint: Defining ${DOCKERFILE_SUFFIX} makes it easier to
 # try variations on the Dockerfile
-build: display Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} ## Build container given PACKAGE=<file>
+build: check_package_count display Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} ## Build container given PACKAGE=<file>
 	docker pull ${CONTAINER_OS}:${CONTAINER_OS_VERSION} ## make sure we use the latest image
 	docker build \
 		-f Dockerfile_$(TARGET_U)${DOCKERFILE_SUFFIX} \
@@ -159,6 +161,7 @@ THIS_DIR := $(realpath .)
 
 .PHONY: test
 test:
+	echo "${CONTAINER_OS_TAG}"
 	rm -rf tmp-test
 	mkdir tmp-test
 	# test vsdk-cp to copy examples from container to local dir
@@ -187,10 +190,6 @@ push: ## push built container up to docker hub
 	docker push $(CONTAINER_TAG)
 
 vsdk-exec: vsdk-exec.template
-	sed "s/++DEFAULT_VERTICA_VERSION++/${VERTICA_VERSION}/" $< > $@
-	chmod +x $@
-
-vsdk-vertica: vsdk-vertica.template
 	sed "s/++DEFAULT_VERTICA_VERSION++/${VERTICA_VERSION}/" $< > $@
 	chmod +x $@
 
