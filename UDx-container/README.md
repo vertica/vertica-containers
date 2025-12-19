@@ -112,6 +112,7 @@ This repository provides `vsdk-*` scripts to help you test and compile your UDx 
 | `vsdk-cp` | Invokes `cp` inside the UDx container. This is a helper script used in the `make test` command, and included because the UDx container is not writable and you might need to copy UDx files to your host for editing. |
 | `vsdk-g++` | Executes the g++ compiler in the UDx container. |
 | `vsdk-make` | Executes `make` in the current working directory in the UDx container. This allows you to develop UDxs locally and compile them with the tools available in the UDx container. |
+| `vsdk-cleanup` | To be run right after the other scripts to clean up left over containers. |
 
 These scripts use the contents of `/etc/os-release` to determine whether the container has a `centos` or `ubuntu` tag. If your host uses a different distribution than your development environment, you can edit `vsdk-bash` directly to change the default setting.
 
@@ -120,6 +121,9 @@ Alternatively, you can interactively define the operating system with the `CONTA
 ```shell
 alias vsdk-make='CONTAINER_OS_TAG=ubuntu path/to/vsdk-make'
 ```
+
+Even better, if you are using a container image from the official OpenText Docker registry, you can simply set the `VSDK_IMAGE` environment variable.
+
 For additional details, see [Compile UDxs](#compile-udxs).
 
 ## Environment variables
@@ -128,7 +132,7 @@ The following table describes the environment variables that you can set to prov
 
 | Environment&nbsp;Variable | Description |
 |:--------------------------|:------------|
-| `VSDK_IMAGE` | The container image to use to run the container. When set, you do not need to set OS. If you locally built the image, it is better to use this variable to run a container. |
+| `VSDK_IMAGE` | The container image to use to run the container. When set, you do not need to set OS. If you already have a container image to run with, you just need to set this variable and ignore `CONTAINER_OS_TAG` and `VERTICA_VERSION`. |
 | `CONTAINER_OS_TAG` | The container operating system distribution, either `centos` or `ubuntu`. This variable is if you use a container that runs an OS that is different from the host OS. If you do not define this variable, `vsdk-make` reads `/etc/os-release` to determine the OS. |
 | `VERTICA_VERSION` | The version number of the Vertica binary used in the build process. |
 | `VSDK_ENV` | Optional file that defines environment variables for `vsdk-*` commands that run in the container. For formatting details, see [Declare default environment variables in file](https://docs.docker.com/compose/env-file/) in the Docker documentation.|
@@ -150,7 +154,7 @@ We use a build process based on the `make` paradigm, with build instructions enc
    ```
 3. Run `vsdk-make` with the required environment variables:
    ```shell 
-   $ VERTICA_VERSION=<vertica-version> CONTAINER_OS_TAG=ubuntu vsdk-make TARGET=deb
+   $ VERTICA_VERSION=<vertica-version> CONTAINER_OS_TAG=ubuntu ./vsdk-make TARGET=deb
    ```
    Additionally, you can use `VSDK_ENV` to pass a file that contains the environment variables:
    ```shell
