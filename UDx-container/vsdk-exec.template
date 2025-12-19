@@ -63,7 +63,7 @@ if [[ -z $VSDK_IMAGE ]]; then
         WARNINGS+=("WARNING: Guessing CONTAINER_OS_TAG $CONTAINER_OS_TAG. Set VSDK_IMAGE to avoid this warning")
     fi
     
-    VERTICA_VERSION=${VERTICA_VERSION:++DEFAULT_VERTICA_VERSION++}
+    VERTICA_VERSION=${VERTICA_VERSION:-++DEFAULT_VERTICA_VERSION++}
     
     if [[ -n $CONTAINER_OS_TAG && -n $VERTICA_VERSION ]]; then
         VSDK_IMAGE=opentext/vertica-sdk:$CONTAINER_OS_TAG-v$VERTICA_VERSION
@@ -113,9 +113,25 @@ case $CMD in
         ;;
     g++|make|cp) 
         ;;
+    cleanup)
+        # Stop and remove all stopped UDx containers
+        echo "Stopping and removing UDx containers..."
+        docker ps -a --filter "ancestor=$VSDK_IMAGE" --format "{{.ID}} {{.Status}}" | while read container_id status; do
+            if [[ $status == Exited* ]] || [[ $status == Created* ]]; then
+                echo "Removing container: $container_id"
+                docker rm $container_id
+            elif [[ $status == Up* ]]; then
+                echo "Stopping and removing running container: $container_id"
+                docker stop $container_id
+                docker rm $container_id
+            fi
+        done
+        echo "Cleanup complete."
+        exit 0
+        ;;
     *)                  
         echo Unknown vsdk-command: $PROG
-        echo Known commands: vsdk-bash, vsdk-g++, vsdk-make, vsdk-cp
+        echo Known commands: vsdk-bash, vsdk-g++, vsdk-make, vsdk-cp, vsdk-cleanup
         exit 1
         ;;
 esac
