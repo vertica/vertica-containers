@@ -154,7 +154,7 @@ We use a build process based on the `make` paradigm, with build instructions enc
    ```
 3. Run `vsdk-make` with the required environment variables:
    ```shell 
-   $ VERTICA_VERSION=<vertica-version> CONTAINER_OS_TAG=ubuntu ./vsdk-make TARGET=deb
+   $ VERTICA_VERSION=<vertica-version> CONTAINER_OS_TAG=ubuntu vsdk-make TARGET=deb
    ```
    Additionally, you can use `VSDK_ENV` to pass a file that contains the environment variables:
    ```shell

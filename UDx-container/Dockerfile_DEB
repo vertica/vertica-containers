@@ -12,16 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ############################################################################
+##### Start Builder Image
 
 # Base operating system
 ARG os_version
 ARG os_image
 
-FROM ${os_image}:${os_version}
-
-# useful to keep dpkg from prompting us for information
-ENV DEBIAN_FRONTEND noninteractive
-ENV TERM 1
+FROM ${os_image}:${os_version} as builder
 
 ENV VERTICA_OPT_DIR="/opt/vertica"
 
@@ -38,14 +35,59 @@ ARG vertica_version
 
 COPY $DEB /tmp/$DEB
 
+# Install minimal dependencies needed for dpkg to install Vertica
+RUN apt-get update -y \
+    && apt-get install --no-install-recommends -y \
+        openssh-server \
+        openssh-client \
+        locales \
+        dialog \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Vertica package to extract SDK
+RUN dpkg -i /tmp/${DEB} \
+    && rm -f /tmp/${DEB}
+
+# Cleanup unnecessary Vertica components to reduce what we copy
+RUN rm -rf ${VERTICA_OPT_DIR}/lib64 \
+    && rm -rf ${VERTICA_OPT_DIR}/share/doc \
+    && rm -rf ${VERTICA_OPT_DIR}/share/man \
+    && rm -rf ${VERTICA_OPT_DIR}/examples
+
+##### End Builder Image
+############################################################################
+
+
+############################################################################
+##### Start Final Image
+
+FROM ${os_image}:${os_version}
+
+# useful to keep dpkg from prompting us for information
+ENV DEBIAN_FRONTEND noninteractive
+ENV TERM 1
+
+ENV VERTICA_OPT_DIR="/opt/vertica"
+
+ARG vertica_db_user="dbadmin"
+ARG vertica_db_group="verticadba"
+ARG dbadmin_gid=1000
+ARG dbadmin_id=1000
+
+ENV VERTICA_HOME_DIR="/home/$vertica_db_user"
+
 # required for Ubuntu because Vertica installer insists on it
 ENV SHELL "/bin/bash"
+
+# Copy only Vertica SDK components from builder
+COPY --from=builder $VERTICA_OPT_DIR $VERTICA_OPT_DIR
 
 # Install prerequisites and development tools
 RUN set -x \
  && apt-get update -y \
  && apt-get upgrade --no-install-recommends -y \
- && apt-get install -y \
+ && apt-get install --no-install-recommends -yqq \
             # Packages needed to build C++ UDxes
             autotools-dev \
             bash \
@@ -95,10 +137,10 @@ RUN set -x \
             -s /bin/bash \
             -g $vertica_db_group \
             -u $dbadmin_id \
-            $vertica_db_user
-
-# Install Vertica package (for SDK headers and libraries only)
-RUN dpkg -i /tmp/${DEB} && rm -f /tmp/${DEB}
+            $vertica_db_user \
+ # Clean up apt cache to reduce image size
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 RUN chown -R $vertica_db_user:$vertica_db_group $VERTICA_OPT_DIR \
     && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
@@ -128,3 +170,6 @@ LABEL os_family="$CONTAINER_OS"
 LABEL os_version="$CONTAINER_OS_VERSION"
 LABEL vertica_version="$VERTICA_VERSION"
 LABEL maintainer="K8 Team"
+
+##### End Final Image
+############################################################################

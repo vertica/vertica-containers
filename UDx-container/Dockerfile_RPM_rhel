@@ -40,76 +40,98 @@ ARG vertica_version
 
 COPY $RPM /tmp/$RPM
 
+# Install Vertica package to extract SDK
+RUN yum localinstall -q -y /tmp/$RPM \
+    && rm -f /tmp/$RPM
+
+# Cleanup unnecessary Vertica components to reduce what we copy
+RUN rm -rf ${VERTICA_OPT_DIR}/lib64 \
+    && rm -rf ${VERTICA_OPT_DIR}/share/doc \
+    && rm -rf ${VERTICA_OPT_DIR}/share/man \
+    && rm -rf ${VERTICA_OPT_DIR}/examples
+
+##### End Builder Image
+############################################################################
 
 
+############################################################################
+##### Start Final Image
 
-RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y dnf-plugins-core && yum clean all
+FROM ${os_image}:${os_version}
 
+ARG vertica_db_user="dbadmin"
+ARG vertica_db_group="verticadba"
+ARG dbadmin_gid=1000
+ARG dbadmin_id=1000
 
-RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} dnf group install -y "Development Tools"
-RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} yum install -y \
-  binutils \
-  boost \
-  bzip2-devel \
-  cmake \
-  doxygen \
-  expat \
-  flex \
-  gcc-c++ \
-  gcc-gfortran \
-  gdb \
-  gettext \
-  git-all \
-  glibc-devel \
-  glibc-headers \
-  glibc-langpack-en \
-  glibc-locale-source \
-  glibc-static \
-  glibc-utils \
-  imake \
-  iproute \
-  less \
-  libasan \
-  libacl-devel \
-  libcurl-devel \
-  libgfortran-* \
-  libgomp-* \
-  libstdc++-static \
-  libtool \
-  make \
-  nasm \
-  openssl-devel \
-  readline-devel \
-  sudo \
-  tar \
-  vim \
-  wget \
-  which \
-  && yum clean all
+ENV VERTICA_OPT_DIR="/opt/vertica"
+ENV VERTICA_HOME_DIR="/home/$vertica_db_user"
 
+# Copy only Vertica SDK components from builder
+COPY --from=builder $VERTICA_OPT_DIR $VERTICA_OPT_DIR
+
+# Install all packages in one layer
+RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} \
+    set -x \
+    && yum install -y dnf-plugins-core \
+    && dnf group install -y "Development Tools" \
+    && yum install -y \
+        binutils \
+        boost \
+        bzip2-devel \
+        cmake \
+        doxygen \
+        expat \
+        flex \
+        gcc-c++ \
+        gcc-gfortran \
+        gdb \
+        gettext \
+        git-all \
+        glibc-devel \
+        glibc-headers \
+        glibc-langpack-en \
+        glibc-locale-source \
+        glibc-static \
+        glibc-utils \
+        imake \
+        iproute \
+        less \
+        libasan \
+        libacl-devel \
+        libcurl-devel \
+        libgfortran-* \
+        libgomp-* \
+        libstdc++-static \
+        libtool \
+        make \
+        nasm \
+        openssl-devel \
+        readline-devel \
+        sudo \
+        tar \
+        vim \
+        wget \
+        which \
+    && yum clean all
 
 RUN alternatives --set python /usr/bin/python3
 
-
-# Install Vertica package (for SDK headers and libraries only)
-RUN yum localinstall -q -y /tmp/$RPM && rm -f /tmp/$RPM
-
-
 RUN localedef -i en_US -f UTF-8 en_US.UTF-8
 
-# Create development user
+# Create development user and set permissions
 RUN /usr/sbin/groupadd -r -g $dbadmin_gid $vertica_db_group \
-  && /usr/sbin/useradd -r \
-              -m \
-              -s /bin/bash \
-              --uid $dbadmin_id \
-              -g $vertica_db_group \
-              $vertica_db_user \
-  && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \
-  && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
-  && chmod 755 ${VERTICA_HOME_DIR} \
-  # Allow passwordless sudo access from any user
-  && echo "ALL ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
+    && /usr/sbin/useradd -r \
+                          -m \
+                          -s /bin/bash \
+                          --uid $dbadmin_id \
+                          -g $vertica_db_group \
+                          $vertica_db_user \
+    && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_OPT_DIR} \
+    && chown -R $vertica_db_user:$vertica_db_group ${VERTICA_HOME_DIR} \
+    && chmod 755 ${VERTICA_HOME_DIR} \
+    # Allow passwordless sudo access from any user
+    && echo "ALL ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
 
 
 ADD ./env_setup/vertica_env.sh /etc/profile.d/
@@ -127,3 +149,6 @@ LABEL os_family="$CONTAINER_OS"
 LABEL os_version="$CONTAINER_OS_VERSION"
 LABEL vertica_version="$VERTICA_VERSION"
 LABEL maintainer="K8 Team"
+
+##### End Final Image
+############################################################################
