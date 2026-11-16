@@ -1,0 +1,28 @@
+FROM eclipse-temurin:11-jre-jammy AS temurin_jre
+
+FROM xxxxxxxxxxxxx/rfcurated/rockylinux:rl9-rfcurated
+RUN dnf -y update \
+	&& dnf -y install bash shadow-utils \
+	&& dnf -y remove gnutls nettle \
+	&& dnf clean all \
+	&& rm -rf /var/cache/dnf
+
+COPY --from=temurin_jre /opt/java/openjdk /opt/java/openjdk
+ENV JAVA_HOME=/opt/java/openjdk
+
+RUN mkdir -p /opt/vertica/log
+RUN chmod 777 /opt/vertica/log
+
+COPY kafka /opt/vertica/packages/kafka
+RUN rm -rf /opt/vertica/packages/kafka/bin/kafkacat /opt/vertica/packages/kafka/lib/*.so /opt/vertica/packages/kafka/ddl /opt/vertica/packages/kafka/examples
+
+COPY java /opt/vertica/java
+
+RUN touch /etc/vkconfig.conf
+RUN touch /etc/keystore.jks
+RUN touch /etc/truststore.jks
+
+RUN useradd --create-home --shell /bin/bash vksched
+USER vksched
+
+ENV PATH=/opt/vertica/packages/kafka/bin:$JAVA_HOME/bin:$PATH
