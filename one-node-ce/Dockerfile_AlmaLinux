@@ -67,7 +67,7 @@ RUN yum install -y \
         sysstat \
         wget \
         which 
-RUN yum localinstall -q -y /tmp/${vertica_package} 
+RUN yum install -q -y /tmp/${vertica_package} 
  # Cleanup to optimize the size of final image
 RUN rm -rf ${VERTICA_OPT_DIR}/lib64 
  # CentOS 8 - fixes issue "Unsupported locale character encoding: use
