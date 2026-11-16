@@ -36,7 +36,7 @@ ARG vertica_version
 COPY $RPM /tmp/$RPM
 
 # Install Vertica package to extract SDK
-RUN yum localinstall -q -y /tmp/$RPM \
+RUN yum install -q -y /tmp/$RPM \
     && rm -f /tmp/$RPM
 
 # Cleanup unnecessary Vertica components to reduce what we copy
