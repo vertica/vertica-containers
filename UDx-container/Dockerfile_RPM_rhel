@@ -74,7 +74,7 @@ COPY --from=builder $VERTICA_OPT_DIR $VERTICA_OPT_DIR
 RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} \
     set -x \
     && yum install -y dnf-plugins-core \
-    && dnf group install -y "Development Tools" \
+    && dnf group install -y "development-tools" \
     && yum install -y \
         binutils \
         boost \
