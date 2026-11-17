@@ -70,7 +70,7 @@ RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} \
     set -x \
     && yum install -y epel-release dnf-plugins-core \
     && yum config-manager --enable powertools \
-    && dnf group install -y "Development Tools" \
+    && dnf group install -y "development-tools" \
     && yum install -y \
         binutils \
         boost \
