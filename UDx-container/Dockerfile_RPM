@@ -90,6 +90,7 @@ RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} \
         glibc-locale-source \
         glibc-static \
         glibc-utils \
+        hostname \
         imake \
         iproute \
         less \
@@ -103,6 +104,7 @@ RUN --mount=type=cache,target=/var/cache/yum/${TARGETOS}/${TARGETARCH} \
         make \
         nasm \
         openssl-devel \
+        pgrep \
         readline-devel \
         sudo \
         tar \
