@@ -2,7 +2,7 @@
 
 This repository provides the tools to build and maintain a containerized version of the [Vertica Kafka Scheduler](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/AutomaticallyCopyingDataFromKafka.htm), a standalone Java application that automatically consumes data from one or more Kafka topics and then loads the structured data into Vertica. The scheduler is controlled by the `vkconfig` command line script.
 
-You can download the pre-built [vertica/kafka-scheduler](https://hub.docker.com/r/opentext/kafka-scheduler) image, or you can use the Dockerfile in this repo to build the image locally. The image is based on [alpine:3.14](https://hub.docker.com/_/alpine) and includes the [openjdk8-jre](https://hub.docker.com/_/openjdk).
+You can download the pre-built [vertica/kafka-scheduler](https://hub.docker.com/r/opentext/kafka-scheduler) image, or you can use the Dockerfile in this repo to build the image locally. The image is based on `wal-artifactory.rocketsoftware.com:6642/rfcurated/rockylinux:rl9-rfcurated`, installs `java-17-openjdk-headless`, `bash`, and `shadow-utils` with `dnf`, then copies scheduler runtime artifacts from your Vertica installation (`kafka` into `/opt/vertica/packages/kafka` and `java` into `/opt/vertica/java`). During image build, it also creates `/opt/vertica/log`, initializes `/etc/vkconfig.conf`, `/etc/keystore.jks`, and `/etc/truststore.jks`, and switches to the non-root `vksched` user.
 
 
 For in-depth details about streaming data with Vertica and Apache Kafka, see [Apache Kafka Integration](https://www.vertica.com/docs/latest/HTML/Content/Authoring/KafkaIntegrationGuide/KafkaIntegrationGuide.htm) in the Vertica documentation.
